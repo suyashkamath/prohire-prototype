@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "ProHire — Save candidate",
+  "version": "0.1.0",
+  "description": "Send a LinkedIn or Naukri profile to ProHire in one click.",
+  "action": {
+    "default_title": "Send to ProHire",
+    "default_popup": "popup.html"
+  },
+  "permissions": ["activeTab", "scripting", "storage"]
+}

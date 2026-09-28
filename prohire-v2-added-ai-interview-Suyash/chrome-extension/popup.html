@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ProHire</title>
+  <style>
+    body { font: 13px/1.45 -apple-system, "Segoe UI", Roboto, sans-serif; width: 300px; margin: 0; padding: 14px; color: #16191d; }
+    h1 { font-size: 15px; margin: 0 0 2px; }
+    .muted { color: #5a6472; font-size: 12px; }
+    .box { margin: 12px 0; padding: 10px; border: 1px solid #dfe3e8; border-radius: 8px; background: #f6f7f9; }
+    .box strong { display: block; font-size: 14px; }
+    button { width: 100%; padding: 9px; border: 0; border-radius: 8px; background: #2f5bd9; color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+    button:disabled { background: #c5ccd4; cursor: default; }
+    label { display: block; margin-top: 12px; font-size: 11.5px; color: #5a6472; }
+    input { width: 100%; box-sizing: border-box; padding: 6px 8px; border: 1px solid #dfe3e8; border-radius: 6px; font: inherit; }
+    .warn { color: #9a6700; }
+  </style>
+</head>
+<body>
+  <h1>Send to ProHire</h1>
+  <div class="muted" id="where">Checking this page…</div>
+  <div class="box" id="preview" hidden><strong id="name"></strong><span class="muted" id="headline"></span></div>
+  <div class="muted" id="tip"></div>
+  <p><button id="send" disabled>Send profile</button></p>
+  <label for="base">ProHire address</label>
+  <input id="base" type="url" placeholder="http://localhost:5173" />
+  <script src="popup.js"></script>
+</body>
+</html>
