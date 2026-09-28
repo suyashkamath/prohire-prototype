@@ -1,0 +1,40 @@
+{
+  "id": "arjun",
+  "name": "Arjun Nair",
+  "reference": "CAN-00006",
+  "applying_for": "sls-0001",
+  "phone": "+919988776655",
+  "email": "arjun.nair@example.com",
+  "experience_years": 1.5,
+  "current": {
+    "title": "Sales Executive",
+    "company": "Metro Retail"
+  },
+  "location": "Kochi",
+  "skills": [
+    "CRM",
+    "Negotiation",
+    "Excel",
+    "Communication"
+  ],
+  "languages": [
+    "English",
+    "Hindi",
+    "Malayalam"
+  ],
+  "resume_text": "Arjun Nair\narjun.nair@example.com | 9988776655 | Kochi, Kerala\n\nWorking as Sales Executive at Metro Retail\nTotal experience: 1.5 years\nCurrent CTC: 3.5 LPA | Expected CTC: 6 LPA | Notice period: 15 days\nLanguages: English, Hindi, Malayalam\n\nEXPERIENCE\nMetro Retail — Sales Executive (2024 - present)\n- Walk-in sales on the shop floor. Hit monthly target 9 months running.\n- Handled customer escalations for the branch.\n\nSKILLS\nCommunication, Negotiation, Excel, CRM\n\nEDUCATION\nB.Com, Kerala University, 2023",
+  "overrides": {
+    "language": "Hindi"
+  },
+  "extra_questions": [
+    {
+      "id": "resume",
+      "text": "Your resume mentions Excel and Communication. Where did you use Excel, and what did it solve?",
+      "text_hi": "आपके resume में Excel और Communication का ज़िक्र है। आपने Excel का इस्तेमाल कहाँ किया, और उससे कौन-सी problem हल हुई?",
+      "must_ask": false,
+      "skill": null
+    }
+  ],
+  "version": 3,
+  "updated_at": "2026-09-28T13:11:56+00:00"
+}

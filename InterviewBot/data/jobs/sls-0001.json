@@ -1,0 +1,121 @@
+{
+  "id": "sls-0001",
+  "reference": "SLS-0001",
+  "title": "Business Development Manager",
+  "department": "Sales",
+  "location": "Pune (Hybrid)",
+  "description": "Own a region's channel business for our insurance products.\n\nYou will recruit and develop an agent network, carry a quarterly number, and run\nthe CRM discipline that makes the pipeline forecastable. This is a field role\nwith real travel.\n\nWhat the role needs:\n- Channel or agency sales in insurance or financial services\n- A track record against a number you can talk through quarter by quarter\n- Salesforce or comparable CRM, used properly\n- Enough seniority to train and hold a team accountable",
+  "skills_required": [
+    "Agency Channel",
+    "Life Insurance",
+    "Lead Generation",
+    "Negotiation",
+    "CRM"
+  ],
+  "primary_skill": "Agency Channel",
+  "primary_skill_min_years": 3,
+  "experience": {
+    "min_years": 4,
+    "max_years": 9,
+    "level": "Experienced"
+  },
+  "interview": {
+    "questions": [
+      {
+        "id": "q1",
+        "text": "Walk me through your experience as it relates to the Business Development Manager role — what have you owned end to end?",
+        "text_hi": "Business Development Manager role से जुड़े अपने अनुभव के बारे में बताइए — कौन-सा काम आपने शुरू से आख़िर तक ख़ुद संभाला है?",
+        "must_ask": true,
+        "skill": null
+      },
+      {
+        "id": "q2",
+        "text": "How have you recruited and activated insurance agents? Walk me through your numbers — how many recruited, how many active after six months.",
+        "text_hi": "आपने insurance agents को कैसे recruit और activate किया है? अपने numbers बताइए — कितने recruit किए, और छह महीने बाद उनमें से कितने active थे।",
+        "must_ask": true,
+        "skill": "Agency Channel"
+      },
+      {
+        "id": "q3",
+        "text": "Tell me about your hands-on work with Life Insurance. What have you actually built with it?",
+        "text_hi": "Life Insurance के साथ अपने hands-on काम के बारे में बताइए। आपने असल में इससे क्या बनाया या हासिल किया है?",
+        "must_ask": false,
+        "skill": "Life Insurance"
+      },
+      {
+        "id": "q4",
+        "text": "Where do your leads actually come from, and what is your conversion rate from lead to closure?",
+        "text_hi": "आपकी leads असल में कहाँ से आती हैं, और lead से closure तक आपका conversion rate कितना है?",
+        "must_ask": false,
+        "skill": "Lead Generation"
+      },
+      {
+        "id": "q5",
+        "text": "Tell me about a negotiation where the customer pushed hard on price. What did you give, and what did you hold?",
+        "text_hi": "किसी ऐसी negotiation के बारे में बताइए जहाँ customer ने price पर बहुत ज़ोर दिया। आपने क्या छोड़ा, और किस बात पर टिके रहे?",
+        "must_ask": false,
+        "skill": "Negotiation"
+      },
+      {
+        "id": "q7",
+        "text": "Tell me about a quarter where you missed your target. What happened, and what did you change?",
+        "text_hi": "किसी ऐसे quarter के बारे में बताइए जब आपका target पूरा नहीं हुआ। क्या हुआ था, और आपने क्या बदला?",
+        "must_ask": false,
+        "skill": null
+      },
+      {
+        "id": "q8",
+        "text": "Walk me through how you win back a customer or agent who has stopped doing business with you.",
+        "text_hi": "जो customer या agent आपके साथ business करना बंद कर चुका हो, उसे आप वापस कैसे जोड़ते हैं? step by step बताइए।",
+        "must_ask": false,
+        "skill": null
+      }
+    ],
+    "questionnaire": [
+      {
+        "id": "kmul4qmzkph",
+        "text": "What is your current CTC (in LPA)?",
+        "text_hi": "आपका मौजूदा CTC कितना है (LPA में)?",
+        "kind": "number",
+        "knockout": null
+      },
+      {
+        "id": "kmul4qmzkih",
+        "text": "What is your expected CTC (in LPA)?",
+        "text_hi": "आपका expected CTC कितना है (LPA में)?",
+        "kind": "number",
+        "knockout": null
+      },
+      {
+        "id": "kmul4qmzk37",
+        "text": "What is your notice period (in days)?",
+        "text_hi": "आपका notice period कितने दिनों का है?",
+        "kind": "number",
+        "knockout": null
+      },
+      {
+        "id": "kmul4qmzki7",
+        "text": "This role is based in Pune. Are you okay working from there?",
+        "text_hi": "यह role Pune में है। क्या आप वहाँ से काम करने के लिए तैयार हैं?",
+        "kind": "yes_no",
+        "knockout": {
+          "answer": "no"
+        }
+      },
+      {
+        "id": "kmul4qmzkhq",
+        "text": "How many years of hands-on experience do you have in Agency Channel?",
+        "text_hi": "Agency Channel में आपके पास कितने साल का hands-on अनुभव है?",
+        "kind": "number",
+        "knockout": {
+          "below": 3
+        }
+      }
+    ],
+    "settings": {
+      "language": "Hindi"
+    }
+  },
+  "version": 3,
+  "updated_at": "2026-09-28T13:11:55+00:00"
+}

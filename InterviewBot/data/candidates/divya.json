@@ -1,0 +1,39 @@
+{
+  "id": "divya",
+  "name": "Divya Raman",
+  "reference": "CAN-00008",
+  "applying_for": "sls-0002",
+  "phone": "+919884455667",
+  "email": "divya.raman@example.com",
+  "experience_years": 2,
+  "current": {
+    "title": "Tele Sales Executive",
+    "company": "Star Health Partners"
+  },
+  "location": "Chennai",
+  "skills": [
+    "CRM",
+    "Excel",
+    "Insurance",
+    "Health Insurance",
+    "Inside Sales",
+    "Customer Service",
+    "Communication"
+  ],
+  "languages": [
+    "English",
+    "Tamil"
+  ],
+  "resume_text": "Divya Raman | divya.raman@example.com | 9884455667 | Chennai\n\nWorking as Tele Sales Executive at Star Health Partners\nTotal experience: 2 years\nCurrent CTC: 3 LPA | Expected CTC: 4 LPA | Notice period: 15 days\nLanguages: Tamil, English\n\nCalled 80+ leads a day for health insurance renewals; converted 18% against a team average of 11%.\nMaintained every call in the CRM and prepared daily reports in Excel.\n\nSKILLS\nHealth Insurance, Customer Service, Inside Sales, CRM, Excel, Communication",
+  "overrides": {},
+  "extra_questions": [
+    {
+      "id": "resume",
+      "text": "Your resume mentions Insurance and Inside Sales. Where did you use Insurance, and what did it solve?",
+      "text_hi": "आपके resume में Insurance और Inside Sales का ज़िक्र है। आपने Insurance का इस्तेमाल कहाँ किया, और उससे कौन-सी problem हल हुई?",
+      "must_ask": false,
+      "skill": null
+    }
+  ],
+  "version": 1
+}

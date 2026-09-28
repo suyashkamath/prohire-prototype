@@ -1,0 +1,115 @@
+{
+  "id": "sls-0002",
+  "reference": "SLS-0002",
+  "title": "Sales Support Executive",
+  "department": "Sales",
+  "location": "Chennai (On-site)",
+  "description": "Support the Chennai branch sales team for our insurance broking business.\n\nYou will follow up leads, prepare quotes for motor and health policies, coordinate\nwith insurers on documentation, and keep the CRM up to date. Tamil and English are\nboth used daily with customers.\n\nWhat the role needs:\n- 1–3 years in insurance, banking or financial-services sales support\n- Comfort speaking with customers on the phone in Tamil and English\n- Basic Excel, and discipline with the CRM",
+  "skills_required": [
+    "Customer Service",
+    "Motor Insurance",
+    "Health Insurance",
+    "CRM",
+    "Excel"
+  ],
+  "primary_skill": "Customer Service",
+  "primary_skill_min_years": null,
+  "experience": {
+    "min_years": 1,
+    "max_years": 3,
+    "level": "Experienced"
+  },
+  "interview": {
+    "questions": [
+      {
+        "id": "q1",
+        "text": "Walk me through your experience as it relates to the Sales Support Executive role — what have you owned end to end?",
+        "text_hi": "Sales Support Executive role से जुड़े अपने अनुभव के बारे में बताइए — कौन-सा काम आपने शुरू से आख़िर तक ख़ुद संभाला है?",
+        "must_ask": true,
+        "skill": null
+      },
+      {
+        "id": "q2",
+        "text": "Tell me about your hands-on work with Customer Service. What have you actually built with it?",
+        "text_hi": "Customer Service के साथ अपने hands-on काम के बारे में बताइए। आपने असल में इससे क्या बनाया या हासिल किया है?",
+        "must_ask": true,
+        "skill": "Customer Service"
+      },
+      {
+        "id": "q3",
+        "text": "Tell me about your hands-on work with Motor Insurance. What have you actually built with it?",
+        "text_hi": "Motor Insurance के साथ अपने hands-on काम के बारे में बताइए। आपने असल में इससे क्या बनाया या हासिल किया है?",
+        "must_ask": false,
+        "skill": "Motor Insurance"
+      },
+      {
+        "id": "q4",
+        "text": "Tell me about your hands-on work with Health Insurance. What have you actually built with it?",
+        "text_hi": "Health Insurance के साथ अपने hands-on काम के बारे में बताइए। आपने असल में इससे क्या बनाया या हासिल किया है?",
+        "must_ask": false,
+        "skill": "Health Insurance"
+      },
+      {
+        "id": "q5",
+        "text": "How did you use your CRM to decide which leads to follow up first?",
+        "text_hi": "किन leads पर पहले follow-up करना है, यह तय करने के लिए आपने अपने CRM का इस्तेमाल कैसे किया?",
+        "must_ask": false,
+        "skill": "CRM"
+      },
+      {
+        "id": "q7",
+        "text": "Tell me about a quarter where you missed your target. What happened, and what did you change?",
+        "text_hi": "किसी ऐसे quarter के बारे में बताइए जब आपका target पूरा नहीं हुआ। क्या हुआ था, और आपने क्या बदला?",
+        "must_ask": false,
+        "skill": null
+      },
+      {
+        "id": "q8",
+        "text": "Walk me through how you win back a customer or agent who has stopped doing business with you.",
+        "text_hi": "जो customer या agent आपके साथ business करना बंद कर चुका हो, उसे आप वापस कैसे जोड़ते हैं? step by step बताइए।",
+        "must_ask": false,
+        "skill": null
+      }
+    ],
+    "questionnaire": [
+      {
+        "id": "kmul4qn07uq",
+        "text": "What is your current CTC (in LPA)?",
+        "text_hi": "आपका मौजूदा CTC कितना है (LPA में)?",
+        "kind": "number",
+        "knockout": null
+      },
+      {
+        "id": "kmul4qn07nd",
+        "text": "What is your expected CTC (in LPA)?",
+        "text_hi": "आपका expected CTC कितना है (LPA में)?",
+        "kind": "number",
+        "knockout": null
+      },
+      {
+        "id": "kmul4qn071s",
+        "text": "What is your notice period (in days)?",
+        "text_hi": "आपका notice period कितने दिनों का है?",
+        "kind": "number",
+        "knockout": null
+      },
+      {
+        "id": "kmul4qn075b",
+        "text": "This role is based in Chennai. Are you okay working from there?",
+        "text_hi": "यह role Chennai में है। क्या आप वहाँ से काम करने के लिए तैयार हैं?",
+        "kind": "yes_no",
+        "knockout": {
+          "answer": "no"
+        }
+      },
+      {
+        "id": "kmul4qn08fp",
+        "text": "How many years of hands-on experience do you have in Customer Service?",
+        "text_hi": "Customer Service में आपके पास कितने साल का hands-on अनुभव है?",
+        "kind": "number",
+        "knockout": null
+      }
+    ]
+  },
+  "version": 1
+}

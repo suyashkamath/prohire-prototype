@@ -1,0 +1,40 @@
+{
+  "id": "karthik",
+  "name": "Karthik Subramanian",
+  "reference": "CAN-00007",
+  "applying_for": "sls-0002",
+  "phone": "+919840012345",
+  "email": "karthik.s@example.com",
+  "experience_years": 3.3,
+  "current": {
+    "title": "Sales Coordinator",
+    "company": "Sundaram Motors Finance Pvt. Ltd."
+  },
+  "location": "Chennai",
+  "skills": [
+    "Customer Service",
+    "Motor Insurance",
+    "Inside Sales",
+    "Excel",
+    "CRM",
+    "Tamil",
+    "Health Insurance",
+    "Renewals",
+    "Insurance"
+  ],
+  "languages": [
+    "Tamil"
+  ],
+  "resume_text": "Karthik Subramanian\n3y 4m\n₹ 3.60 Lacs\nChennai\nCurrent\nSales Coordinator at Sundaram Motors Finance Pvt. Ltd.\nPrevious\nCustomer Service Executive at Vels Insurance Services\nEducation\nB.Com University of Madras 2020\nPref. locations\nChennai, Coimbatore\nKey skills\nCustomer Service | Motor Insurance | Inside Sales | Excel | CRM | Tamil | Health Insurance\nMay also know\nRenewals | Policy Docu... more\nkarthik.s@example.com | 9840012345",
+  "overrides": {},
+  "extra_questions": [
+    {
+      "id": "resume",
+      "text": "Your resume mentions Inside Sales and Tamil. Where did you use Inside Sales, and what did it solve?",
+      "text_hi": "आपके resume में Inside Sales और Tamil का ज़िक्र है। आपने Inside Sales का इस्तेमाल कहाँ किया, और उससे कौन-सी problem हल हुई?",
+      "must_ask": false,
+      "skill": null
+    }
+  ],
+  "version": 1
+}

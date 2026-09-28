@@ -1,0 +1,44 @@
+{
+  "id": "sneha",
+  "name": "Sneha Deshpande",
+  "reference": "CAN-00005",
+  "applying_for": "sls-0001",
+  "phone": "+919812345678",
+  "email": "sneha.d@example.com",
+  "experience_years": 6,
+  "current": {
+    "title": "Business Development Manager",
+    "company": "Horizon Insurance"
+  },
+  "location": "Mumbai",
+  "skills": [
+    "Salesforce",
+    "CRM",
+    "Lead Generation",
+    "Cold Calling",
+    "Negotiation",
+    "Excel",
+    "Insurance",
+    "Communication",
+    "Team Leadership",
+    "Stakeholder Management"
+  ],
+  "languages": [
+    "English",
+    "Hindi",
+    "Marathi",
+    "Gujarati"
+  ],
+  "resume_text": "Sneha Deshpande\nsneha.d@example.com | 9812345678 | Mumbai, Maharashtra\n\nWorking as Business Development Manager at Horizon Insurance\nTotal experience: 6 years\nCurrent CTC: 9 LPA | Expected CTC: 13 LPA | Notice period: 30 days\nLanguages: English, Hindi, Marathi, Gujarati\n\nEXPERIENCE\nHorizon Insurance — Business Development Manager (2021 - present)\n- Owned the West region channel. Grew the agent network from 40 to 180.\n- Beat target 7 of 8 quarters; best quarter 142% of plan.\n- Ran Salesforce for the region and trained 20 field staff on it.\n\nSunrise Financial — Sales Executive (2019 - 2021)\n- Cold calling, lead generation, closing. Consistent top-three performer.\n\nSKILLS\nSalesforce, CRM, Lead Generation, Cold Calling, Negotiation, Team Leadership,\nExcel, Communication, Stakeholder Management\n\nEDUCATION\nMBA Marketing, Symbiosis Pune, 2019",
+  "overrides": {},
+  "extra_questions": [
+    {
+      "id": "resume",
+      "text": "Your resume mentions Salesforce and Cold Calling. Where did you use Salesforce, and what did it solve?",
+      "text_hi": "आपके resume में Salesforce और Cold Calling का ज़िक्र है। आपने Salesforce का इस्तेमाल कहाँ किया, और उससे कौन-सी problem हल हुई?",
+      "must_ask": false,
+      "skill": null
+    }
+  ],
+  "version": 1
+}
