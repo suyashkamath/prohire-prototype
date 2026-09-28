@@ -1,0 +1,15 @@
+{
+  "name": "Probus Insurance",
+  "settings": {
+    "language": "English",
+    "strictness": "moderate",
+    "duration_minutes": 30,
+    "max_questions": 8,
+    "follow_ups_per_question": 1,
+    "interviewer_name": "Aarya",
+    "instructions": "",
+    "voice_speaker": "",
+    "max_tab_switches": 3
+  },
+  "version": 1
+}

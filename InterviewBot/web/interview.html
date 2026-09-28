@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Interview</title>
+  <link rel="stylesheet" href="/static/style.css?v=3">
+</head>
+<body>
+<div class="wrap narrow">
+  <div class="between">
+    <div><h1 id="title">Interview</h1><div id="subtitle" class="small muted"></div></div>
+    <span class="chip accent" id="aiBadge">AI interview</span>
+  </div>
+
+  <!-- 1. welcome + consent -->
+  <section id="welcome" class="card" hidden>
+    <h2 id="helloText"></h2>
+    <p id="leadText" class="muted" style="margin:0"></p>
+    <ul id="consentList" class="small muted" style="margin:0;padding-left:18px"></ul>
+    <label style="flex-direction:row;align-items:center;gap:8px;font-weight:600">
+      <input type="checkbox" id="agree" style="width:auto"> <span id="agreeText"></span>
+    </label>
+    <div class="row"><button class="primary" id="toCheck" disabled></button></div>
+  </section>
+
+  <!-- 2. device check -->
+  <section id="check" class="card" hidden>
+    <h2 id="checkTitle"></h2>
+    <div class="row">
+      <video id="preview" class="self" autoplay playsinline muted style="margin-left:0"></video>
+      <div class="small muted" id="checkText"></div>
+    </div>
+    <div id="checkError"></div>
+    <div class="row"><button id="enable"></button><button class="primary" id="begin" disabled></button></div>
+  </section>
+
+  <!-- 3. live interview -->
+  <section id="live" class="card" hidden>
+    <div class="stage">
+      <div class="orb" id="orb"></div>
+      <div><b id="interviewerName"></b><div class="small muted" id="state"></div></div>
+      <video id="self" class="self" autoplay playsinline muted></video>
+    </div>
+    <div class="between small"><span class="rec" id="rec" hidden>● REC</span><span class="dim" id="timer"></span></div>
+    <div id="warning"></div>
+    <div class="transcript" id="transcript"></div>
+    <div class="row"><button class="danger" id="endBtn"></button></div>
+  </section>
+
+  <!-- 4. done -->
+  <section id="done" class="card" hidden>
+    <h2 id="doneTitle"></h2>
+    <p class="muted" id="doneText" style="margin:0"></p>
+  </section>
+
+  <div id="error"></div>
+</div>
+<script src="/static/interview.js?v=3"></script>
+</body>
+</html>

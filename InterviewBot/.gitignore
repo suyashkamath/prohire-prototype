@@ -1,0 +1,15 @@
+# Secrets (API keys). Never commit; copy .env.example to .env instead.
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Interview data: candidates' transcripts, videos, settings history. Never commit.
+data/sessions/
+data/recordings/
+data/history/

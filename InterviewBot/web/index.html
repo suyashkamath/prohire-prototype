@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>InterviewBot Settings</title>
+  <link rel="stylesheet" href="/static/style.css?v=3">
+</head>
+<body>
+<div class="wrap narrow-wide">
+  <div class="between">
+    <div>
+      <h1>ProHire InterviewBot</h1>
+      <div class="muted small">Set up an AI interview in three steps. Every setting can be changed any number of times.</div>
+    </div>
+    <div id="version" class="small dim"></div>
+  </div>
+
+  <div id="status"></div>
+
+  <nav class="steps" aria-label="Steps">
+    <button class="step" data-step="job"><span>1</span> Job</button>
+    <button class="step" data-step="candidate"><span>2</span> Candidate</button>
+    <button class="step" data-step="review"><span>3</span> Review &amp; start</button>
+  </nav>
+
+  <!-- Step 1: the job, its settings and its questions -->
+  <section class="card" id="step-job" hidden>
+    <div>
+      <h2>Job</h2>
+      <div class="small muted">These settings apply to every candidate on this job.</div>
+    </div>
+    <label>Job <select id="job"></select></label>
+    <div id="jobInfo" class="note small"></div>
+
+    <h3>Interview settings</h3>
+    <div id="jobSettings" class="grid"></div>
+    <label>Instructions for the interviewer
+      <textarea id="jobInstructions" rows="3" placeholder="e.g. Focus on agent activation numbers. Keep it conversational."></textarea>
+    </label>
+
+    <div class="between">
+      <h3>Questions</h3>
+      <button id="addQuestion">+ Add question</button>
+    </div>
+    <div class="small muted">Asked in this order. Add a Hindi version to use it when the interview is in Hindi.</div>
+    <div id="questions" class="questions"></div>
+
+    <div class="step-foot">
+      <span id="jobSaved" class="small dim"></span>
+      <button class="primary" id="jobNext">Save &amp; continue →</button>
+    </div>
+  </section>
+
+  <!-- Step 2: the candidate and their own settings -->
+  <section class="card" id="step-candidate" hidden>
+    <div>
+      <h2>Candidate</h2>
+      <div class="small muted">Settings for this candidate only. Leave a field empty to use the job's setting.</div>
+    </div>
+    <label>Candidate <select id="candidate"></select></label>
+    <div id="candInfo" class="note small"></div>
+
+    <h3>Settings for this candidate</h3>
+    <div id="candSettings" class="grid"></div>
+    <label>Extra instructions for this candidate
+      <textarea id="candInstructions" rows="3" placeholder="Leave empty to use the job's instructions"></textarea>
+    </label>
+
+    <div class="between">
+      <h3>Extra questions for this candidate</h3>
+      <button id="addCandQuestion">+ Add question</button>
+    </div>
+    <div class="small muted">Asked after the job's questions, e.g. about something on their resume.</div>
+    <div id="candQuestions" class="questions"></div>
+
+    <div class="step-foot">
+      <button id="candBack">← Back</button>
+      <span id="candSaved" class="small dim"></span>
+      <button class="primary" id="candNext">Save &amp; continue →</button>
+    </div>
+  </section>
+
+  <!-- Step 3: check everything, then start -->
+  <section class="card" id="step-review" hidden>
+    <div>
+      <h2>Review &amp; start</h2>
+      <div class="small muted">The job and candidate settings combined — exactly what this interview will use.</div>
+    </div>
+    <div id="previewOut"></div>
+    <div class="step-foot">
+      <button id="reviewBack">← Back</button>
+      <span id="startMsg" class="small dim"></span>
+      <button class="primary" id="start">Start interview</button>
+    </div>
+  </section>
+
+  <section class="card" id="past" hidden>
+    <h2>Past interviews</h2>
+    <div id="sessions" class="small muted">None yet.</div>
+  </section>
+
+</div>
+<script src="/static/settings.js?v=3"></script>
+</body>
+</html>
