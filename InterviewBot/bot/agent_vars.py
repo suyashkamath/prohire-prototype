@@ -9,6 +9,7 @@ without touching the agent.
 from sarvam_conv_ai_sdk import TextToSpeechConfig
 from sarvam_conv_ai_sdk.tool import SarvamToolLanguageName
 
+from . import turns
 from .config_store import STRICTNESS
 
 # Every variable sent to the agent. The agent only uses a variable that is also
@@ -82,8 +83,35 @@ def variables(plan: dict) -> dict:
         "questions": numbered,
         "primary_skill": plan["job"].get("primary_skill") or "",
         "key_skills": ", ".join(plan["job"].get("skills_required") or []),
-        "extra_instructions": s.get("instructions", ""),
+        "extra_instructions": "\n".join(filter(None, [ORDER, s.get("instructions", ""), PROBE, _ending(s.get("language", "English"))])),
     }
+
+
+# The agent's own script tends to open with a question of its own; the plan's
+# first question (from ProHire, "Tell me about yourself") has to come first.
+ORDER = (
+    "Right after the greeting, ask question 1 exactly as listed, then the rest in the order given. "
+    "Do not add an opening question of your own before question 1."
+)
+
+
+# A memorised or prompted answer falls apart when asked for the person's own
+# detail, so the follow-up asks for exactly that (see bot/integrity.py).
+PROBE = (
+    "If an answer sounds read out, memorised or generic, use your follow-up to ask for one specific "
+    "example from the candidate's own work: what they did, with a number, a name or a date. "
+    "Never accuse the candidate or mention cheating."
+)
+
+
+def _ending(language: str) -> str:
+    """How to end, in words the server recognises (turns.is_closing), so the
+    interview ends as soon as the agent says it — the candidate never has to."""
+    return (
+        "Let the candidate finish: a short pause is not the end of an answer. "
+        f'When every question is done, say exactly: "{turns.CLOSING_LINE.get(language, turns.CLOSING_LINE["English"])}" '
+        "and then end the call. Do not ask the candidate to end it."
+    )
 
 
 def overrides(plan: dict) -> dict:

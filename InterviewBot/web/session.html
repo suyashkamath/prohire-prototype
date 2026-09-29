@@ -4,38 +4,33 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Interview Review</title>
-  <link rel="stylesheet" href="/static/style.css?v=3">
+  <link rel="stylesheet" href="/static/style.css?v=5">
 </head>
 <body>
 <div class="wrap">
-  <div class="between"><div><h1 id="title">Interview</h1><div id="meta" class="small muted"></div></div><a href="/">← Settings</a></div>
+  <div class="between">
+    <div><h1 id="title">Interview</h1><div id="meta" class="small muted"></div></div>
+    <a href="/#review">← Settings</a>
+  </div>
+
+  <!-- the report, built from the candidate's answers -->
+  <section class="card">
+    <div class="between">
+      <h2>Interview report</h2>
+      <div class="row"><span id="reportMsg" class="small dim"></span><button id="makeReport">Generate report</button></div>
+    </div>
+    <div id="report" class="small muted">No report yet.</div>
+  </section>
+
   <div class="cols">
-    <div class="card"><h2>Conversation</h2><div id="turns" class="transcript" style="max-height:none"></div></div>
+    <section class="card"><h2>Conversation</h2><div id="turns" class="transcript" style="max-height:none"></div></section>
     <div style="display:flex;flex-direction:column;gap:16px">
-      <div class="card"><h2>Agent's results</h2><div id="results" class="small muted">The agent has not reported any results.</div></div>
-      <div class="card"><h2>Recording</h2><div id="recording" class="small muted">No recording.</div></div>
-      <div class="card"><h2>Events</h2><div id="events" class="small muted">None.</div></div>
-      <div class="card"><h2>Settings used</h2><div id="plan" class="small"></div></div>
+      <section class="card"><h2>Recording</h2><div id="recording" class="small muted">No recording.</div></section>
+      <section class="card"><h2>Events</h2><div id="events" class="small muted">None.</div></section>
+      <section class="card"><h2>Settings used</h2><div id="plan" class="small"></div></section>
     </div>
   </div>
 </div>
-<script>
-  const $ = (id) => document.getElementById(id)
-  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
-  const id = location.pathname.split('/').pop()
-  fetch(`/api/sessions/${id}`).then((r) => r.json()).then((s) => {
-    const p = s.plan
-    const at = (iso) => s.started_at ? ((new Date(iso) - new Date(s.started_at)) / 1000) : null
-    const mmss = (sec) => sec == null ? '' : `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`
-    $('title').textContent = `${p.candidate.name} · ${p.job.title}`
-    $('meta').textContent = `${p.settings.language} · ${p.settings.strictness} · ${s.status}${s.end_reason ? ` (${s.end_reason})` : ''} · Sarvam interaction ${s.interaction_id ?? '—'}`
-    $('turns').innerHTML = s.turns.length ? s.turns.map((t) => `<div class="bubble ${t.role}"><span class="who">${t.role === 'candidate' ? esc(p.candidate.name) : esc(p.settings.interviewer_name)} · ${mmss(at(t.at))}</span>${esc(t.text)}</div>`).join('') : '<div class="muted">No conversation recorded.</div>'
-    const res = Object.entries(s.results ?? {})
-    if (res.length) $('results').innerHTML = `<table>${res.map(([k, v]) => `<tr><td>${esc(k.replace(/_/g, ' '))}</td><td><b>${esc(v)}</b></td></tr>`).join('')}</table>`
-    if (s.recording) $('recording').innerHTML = `<video controls src="/api/sessions/${id}/recording" style="width:100%;border-radius:8px"></video><a href="/api/sessions/${id}/recording" download>Download video</a>`
-    if (s.events.length) $('events').innerHTML = s.events.map((e) => `<div>${esc(e.kind)} · ${mmss(at(e.at))}</div>`).join('')
-    $('plan').innerHTML = `<table>${Object.entries(p.settings).map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td><td class="dim">${esc(p.settings_from[k])}</td></tr>`).join('')}</table><ol class="mt">${p.questions.map((q) => `<li>${esc(q.asked_as)}</li>`).join('')}</ol>`
-  })
-</script>
+<script src="/static/session.js?v=5"></script>
 </body>
 </html>

@@ -26,7 +26,9 @@
     "Tamil"
   ],
   "resume_text": "Karthik Subramanian\n3y 4m\n₹ 3.60 Lacs\nChennai\nCurrent\nSales Coordinator at Sundaram Motors Finance Pvt. Ltd.\nPrevious\nCustomer Service Executive at Vels Insurance Services\nEducation\nB.Com University of Madras 2020\nPref. locations\nChennai, Coimbatore\nKey skills\nCustomer Service | Motor Insurance | Inside Sales | Excel | CRM | Tamil | Health Insurance\nMay also know\nRenewals | Policy Docu... more\nkarthik.s@example.com | 9840012345",
-  "overrides": {},
+  "overrides": {
+    "language": "English"
+  },
   "extra_questions": [
     {
       "id": "resume",
@@ -36,5 +38,6 @@
       "skill": null
     }
   ],
-  "version": 1
+  "version": 4,
+  "updated_at": "2026-09-29T05:49:35+00:00"
 }

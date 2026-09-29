@@ -38,6 +38,7 @@ SETTING_KEYS = {
     "instructions",           # free-text guidance for the interviewer
     "voice_speaker",          # Sarvam speaker name; empty = the agent's own voice
     "max_tab_switches",
+    "answer_pause_seconds",   # silence that ends an answer; shorter pauses are the candidate thinking
 }
 
 LANGUAGES = ("English", "Hindi")
@@ -86,6 +87,10 @@ def _clean_settings(raw: dict | None) -> dict:
             value = int(value)
             if value < 0:
                 raise ValueError(f"{key} cannot be negative.")
+        if key == "answer_pause_seconds":
+            value = float(value)
+            if not 1 <= value <= 8:
+                raise ValueError("The answer pause must be between 1 and 8 seconds.")
         out[key] = value
     return out
 
@@ -204,3 +209,8 @@ def resolve(job_id: str, candidate_id: str, interview_overrides: dict | None = N
         "questions": questions,
         "versions": {"company": comp.get("version", 0), "job": jb.get("version", 0), "candidate": cand.get("version", 0)},
     }
+
+
+# Used by bot/prohire.py for plans that come from ProHire rather than data/.
+clean_settings = _clean_settings
+clean_questions = _clean_questions

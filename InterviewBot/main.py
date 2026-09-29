@@ -11,19 +11,30 @@ Keys stay in .env and on this server. This is a local prototype: the API below
 has no login of its own, so run it on your own machine only.
 """
 
+import asyncio
 import logging
+import os
 
-from fastapi import Body, FastAPI, File, HTTPException, UploadFile, WebSocket
+from fastapi import Body, FastAPI, File, HTTPException, Request, UploadFile, WebSocket
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from bot import agent_vars, config_store, sessions
+from bot import agent_vars, config_store, prohire, report, sessions
 from bot.bridge import run_interview
 from bot.settings import ROOT, load
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 app = FastAPI(title="ProHire InterviewBot")
+# The ProHire console (a browser app on another port) calls the /api/prohire
+# routes and reads sessions back. Only its own address is let in.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[o.strip() for o in os.getenv("PROHIRE_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if o.strip()],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
+)
 WEB = ROOT / "web"
 app.mount("/static", StaticFiles(directory=WEB), name="static")
 
@@ -59,6 +70,7 @@ def status():
         "missing": s.missing(),
         "api_key_from": s.api_key_from,     # the variable's NAME, never its value
         "agent_variables": agent_vars.VARIABLE_NAMES,
+        "email": prohire.email_ready(),     # can the invite be emailed from here (SMTP set up)?
     }
 
 
@@ -152,6 +164,66 @@ def create_session(body: dict = Body(...)):
     return {"id": s["id"], "url": f"/interview/{s['id']}"}
 
 
+def _public_url(request: Request, path: str) -> str:
+    """An absolute link a candidate can open. PUBLIC_URL (in .env) is the address
+    candidates reach this server on; without it, the address ProHire used."""
+    base = (os.getenv("PUBLIC_URL") or str(request.base_url)).rstrip("/")
+    return f"{base}{path}"
+
+
+@app.post("/api/prohire/sessions")
+def create_prohire_session(request: Request, body: dict = Body(...)):
+    """An interview set up in ProHire: its frozen plan in, an interview link out."""
+    try:
+        plan = prohire.plan_from(body)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    s = sessions.create(plan)
+    return {"id": s["id"], "url": _public_url(request, f"/interview/{s['id']}")}
+
+
+@app.post("/api/prohire/sessions/{session_id}/invite")
+def update_prohire_invite(session_id: str, body: dict = Body(...)):
+    """ProHire resent (new expiry) or cancelled the invite."""
+    try:
+        s = sessions.get(session_id)
+    except KeyError as e:
+        _not_found(e)
+    if not s["plan"].get("prohire"):
+        raise HTTPException(status_code=400, detail="Not an interview from ProHire.")
+    if body.get("cancel"):
+        if s["status"] == "live":
+            raise HTTPException(status_code=409, detail="The interview is in progress.")
+        sessions.end(session_id, "cancelled")
+    elif body.get("expires_at"):
+        sessions.set_expiry(session_id, str(body["expires_at"]))
+    return {"ok": True, "status": sessions.get(session_id)["status"]}
+
+
+@app.post("/api/prohire/sessions/{session_id}/email")
+async def email_invite(session_id: str, body: dict = Body(...)):
+    """Email the candidate their interview link from the HR mailbox."""
+    if not prohire.email_ready():
+        raise HTTPException(status_code=503, detail="Email is not set up on the interview server (SMTP_HOST, SMTP_FROM in .env).")
+    try:
+        s = sessions.get(session_id)
+    except KeyError as e:
+        _not_found(e)
+    to, cc = str(body.get("to") or ""), str(body.get("cc") or "")
+    subject, text = str(body.get("subject") or ""), str(body.get("body") or "")
+    try:
+        prohire.check_email(s, to, cc, subject, text, link=f"/interview/{session_id}")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    try:
+        await asyncio.to_thread(prohire.send_email, to, cc, subject, text)
+    except Exception as e:  # the mail server said no
+        logging.getLogger("interviewbot").exception("Invite email for %s failed", session_id)
+        raise HTTPException(status_code=502, detail=f"The email could not be sent: {e}")
+    sessions.add_email(session_id, to, cc, subject)
+    return {"ok": True}
+
+
 @app.get("/api/sessions")
 def list_sessions():
     return [
@@ -170,6 +242,15 @@ def get_session(session_id: str):
         _not_found(e)
 
 
+@app.post("/api/sessions/{session_id}/report")
+async def make_report(session_id: str):
+    """Score the interview from the candidate's answers (again, if already done)."""
+    try:
+        return await report.generate(session_id)
+    except KeyError as e:
+        _not_found(e)
+
+
 @app.get("/api/sessions/{session_id}/public")
 def get_session_public(session_id: str):
     """What the candidate's page may see: never the question list."""
@@ -180,7 +261,7 @@ def get_session_public(session_id: str):
     p = s["plan"]
     return {
         "id": s["id"],
-        "status": s["status"],
+        "status": "expired" if s["status"] == "ready" and prohire.expired(s) else s["status"],
         "candidate_name": p["candidate"]["name"],
         "job_title": p["job"]["title"],
         "company": p["company"],
@@ -189,6 +270,28 @@ def get_session_public(session_id: str):
         "duration_minutes": p["settings"].get("duration_minutes", 30),
         "max_tab_switches": p["settings"].get("max_tab_switches", 3),
     }
+
+
+PROCTORING_KEYS = {
+    "face_check", "reason", "samples", "face_visible_share", "totals", "answers", "episodes",
+    "screen_extended", "virtual_camera", "camera_label", "people_check", "multi_share",
+}
+
+
+@app.post("/api/sessions/{session_id}/proctoring")
+def save_proctoring(session_id: str, body: dict = Body(...)):
+    """The camera summary from the candidate's page (web/proctor.js), sent once as it closes."""
+    try:
+        s = sessions.get(session_id)
+    except KeyError as e:
+        _not_found(e)
+    if s.get("proctoring"):
+        raise HTTPException(status_code=409, detail="Already received.")
+    summary = {k: v for k, v in body.items() if k in PROCTORING_KEYS}
+    for key in ("answers", "episodes"):
+        summary[key] = [a for a in (summary.get(key) or []) if isinstance(a, dict)][:200]
+    sessions.save_proctoring(session_id, summary)
+    return {"ok": True}
 
 
 @app.post("/api/sessions/{session_id}/recording")

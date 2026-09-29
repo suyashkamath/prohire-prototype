@@ -11,6 +11,8 @@ import { languageOptions, ALLOWED_DURATIONS } from '../../../domain/locations.js
 import { DEFAULT_TEMPLATES, PLACEHOLDERS } from '../../../domain/emailTemplates.js'
 import { PersonaOrb } from '../../../components/Brand.jsx'
 import { seed, isSeeded } from '../../../lib/seed.js'
+import { botStatus, DEFAULT_BOT_URL } from '../../../services/interviewBot.js'
+import { BOT_LANGUAGES } from '../../../domain/interviewBot.js'
 
 export default function SettingsPage() {
   const toast = useToast()
@@ -92,11 +94,8 @@ export default function SettingsPage() {
                 Used when a job has no settings of its own. Each job can change these, and each
                 candidate can still get different settings when invited.
               </p>
-              <Field label="Format">
-                <Select
-                  options={Object.entries(INTERVIEW_MODES).map(([k, v]) => ({ value: k, label: `${v.label} — ${v.detail}` }))}
-                  value={org.rules.mode ?? 'video'} onChange={(v) => patchOrgRules({ mode: v })}
-                />
+              <Field label="Format" hint="The screening round is always the AI video interview.">
+                <div className="fixed-value">{INTERVIEW_MODES.call.label} — {INTERVIEW_MODES.call.detail}</div>
               </Field>
 
               <Field label="Strictness">
@@ -108,8 +107,9 @@ export default function SettingsPage() {
               <div className="grid c2">
                 <Field label="Language">
                   <Select
-                    options={languageOptions()}
-                    value={org.rules.language} onChange={(v) => patchOrgRules({ language: v })}
+                    options={languageOptions().filter((o) => BOT_LANGUAGES.includes(o.value))}
+                    value={BOT_LANGUAGES.includes(org.rules.language) ? org.rules.language : 'en-IN'}
+                    onChange={(v) => patchOrgRules({ language: v })}
                   />
                 </Field>
                 <Field label="Duration">
@@ -127,6 +127,7 @@ export default function SettingsPage() {
                 />
               </Field>
             </Card>
+            <VoiceInterviewCard settings={settings} />
             <EmailTemplates />
             <CareerPortalCard />
           </div>
@@ -284,6 +285,42 @@ function CareerPortalCard() {
         has every field. The endpoints go live with the ProHire backend; until then, use
         &ldquo;Test: simulate an application&rdquo; on a job.
       </div>
+    </Card>
+  )
+}
+
+/**
+ * Where the AI voice interview runs: the InterviewBot server, which holds the
+ * Sarvam keys and the HR mailbox settings. Only its address is kept here.
+ */
+function VoiceInterviewCard({ settings }) {
+  const [status, setStatus] = useState(null)
+  const [checking, setChecking] = useState(false)
+  const check = async () => {
+    setChecking(true)
+    setStatus(await botStatus())
+    setChecking(false)
+  }
+  return (
+    <Card title="AI video interview">
+      <p className="small muted">
+        The AI video interview runs on the InterviewBot server (see <code className="mono">InterviewBot/README.md</code>).
+        Its Sarvam keys and the HR mailbox are set in that server’s <code className="mono">.env</code>, never here.
+      </p>
+      <Field label="Server address" hint="Where this console reaches the interview server. Candidates get the address set as PUBLIC_URL on that server.">
+        <div className="row">
+          <input
+            type="url" value={settings.interview_bot_url ?? DEFAULT_BOT_URL}
+            onChange={(e) => { updateSettings({ interview_bot_url: e.target.value.trim() }); setStatus(null) }}
+          />
+          <button className="btn" onClick={check} disabled={checking}>{checking ? 'Checking…' : 'Check'}</button>
+        </div>
+      </Field>
+      {status && (
+        !status.reachable ? <div className="note bad small">{status.error}</div>
+        : !status.ready ? <div className="note warn small">Reachable, but missing: {status.missing.join(', ')}.</div>
+        : <div className="note good small">Ready. {status.email ? 'Invites are emailed from the HR mailbox.' : 'The HR mailbox is not set up, so invites open in the recruiter’s mail app.'}</div>
+      )}
     </Card>
   )
 }

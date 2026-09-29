@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 
 import { useLive } from '../../../components/ui/useLive.js'
@@ -6,17 +6,31 @@ import { Card, Badge, Tabs, Empty, Modal, CopyButton } from '../../../components
 import { useToast } from '../../../components/ui/toastContext.js'
 import {
   getSession, getReportForSession, recordVerdict, reportUrl, generateReport, endReasonLabel,
+  linkFor, syncBotSession,
 } from '../../../services/interviews.js'
 import { getCandidate } from '../../../services/candidates.js'
 import { formatDateTime } from '../../../lib/format.js'
 import ReportView from '../../../components/ReportView.jsx'
+import { INTERVIEW_MODES } from '../../../domain/resolvePlan.js'
 
 export default function SessionDetail() {
   const { id } = useParams()
   const [tab, setTab] = useState('report')
   const [verdict, setVerdict] = useState(null)
   const [regenerating, setRegenerating] = useState(false)
+  const [syncError, setSyncError] = useState(null)
   const toast = useToast()
+
+  // A voice call lives on the InterviewBot server: bring it up to date on open.
+  const isCall = Boolean(getSession(id)?.bot)
+  useEffect(() => {
+    if (!isCall) return
+    let live = true
+    syncBotSession(id)
+      .then(() => { if (live) setSyncError(null) })
+      .catch((err) => { if (live) setSyncError(err.message) })
+    return () => { live = false }
+  }, [id, isCall])
 
   const data = useLive(
     () => {
@@ -60,6 +74,11 @@ export default function SessionDetail() {
       </div>
 
       <div className="page wide">
+        {syncError && (
+          <div className="note warn mb">
+            <strong>Showing what was last saved.</strong> {syncError}
+          </div>
+        )}
         {report?.recruiter_verdict ? (
           <div className="note good mb">
             <strong>{report.recruiter_verdict.by}</strong> decided{' '}
@@ -84,13 +103,20 @@ export default function SessionDetail() {
           </div>
         ) : session.state === 'in_progress' ? (
           <div className="note warn mb">
-            This interview is in progress. The report is written once it finishes.
+            {session.bot
+              ? 'The AI video interview is in progress. The transcript below fills in as it goes, and the report is written once it ends.'
+              : 'This interview is in progress. The report is written once it finishes.'}
+          </div>
+        ) : session.state === 'completed' && session.bot ? (
+          <div className="note info mb">
+            The interview has ended. {session.plan.persona.name}’s report is being written from the transcript and
+            appears here in a minute or two.
           </div>
         ) : session.state === 'invited' ? (
           <div className="note info mb">
             Link sent {formatDateTime(session.invite.issued_at)}, not opened yet. It expires{' '}
             {formatDateTime(session.invite.expires_at)}.
-            <div className="row mt"><CopyButton text={`${location.origin}/interview/${session.invite.token}`} label="Copy interview link" /></div>
+            <div className="row mt"><CopyButton text={linkFor(session)} label="Copy interview link" /></div>
           </div>
         ) : null}
 
@@ -130,8 +156,12 @@ export default function SessionDetail() {
                   }
                 >
                   {session.state === 'abandoned'
-                    ? 'This session was abandoned. Whatever was answered can still be scored.'
-                    : 'The report is written when the interview finishes.'}
+                    ? session.bot
+                      ? `The call ended before the candidate answered (${endReasonLabel(session.end_reason)}). Send a new interview from the job’s pipeline.`
+                      : 'This session was abandoned. Whatever was answered can still be scored.'
+                    : session.bot && session.state === 'completed'
+                      ? 'The report is on its way. If it does not appear, score it again from here.'
+                      : 'The report is written when the interview finishes.'}
                 </Empty>
               </Card>
             )
@@ -212,7 +242,9 @@ function FrozenPlan({ session }) {
         <Card title="Settings">
           <dl className="kv">
             <dt>Assessment</dt><dd>{(p.rules.assessment_type ?? 'interview').replace('qualification', 'questionnaire')}</dd>
-            <dt>Format</dt><dd>{p.rules.mode}</dd>
+            <dt>Format</dt><dd>{INTERVIEW_MODES[p.rules.mode]?.label ?? p.rules.mode}</dd>
+            {p.rules.mode === 'call' && <><dt>Answer pause</dt><dd>{p.rules.answer_pause_seconds ?? 2.5} seconds</dd></>}
+            {p.rules.instructions && <><dt>Instructions</dt><dd>{p.rules.instructions}</dd></>}
             <dt>Language</dt><dd>{p.persona.language_label ?? p.rules.language}</dd>
             <dt>Duration</dt><dd>{p.rules.duration_minutes} min{p.rules.light_mode && ' (light mode)'}</dd>
             <dt>Strictness</dt><dd>{p.rules.strictness}</dd>

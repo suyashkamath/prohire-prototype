@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Routes, Route, NavLink, Navigate } from 'react-router-dom'
 
 import { currentUser, signIn, signOut } from '../services/core.js'
-import { sweepExpired } from '../services/interviews.js'
+import { sweepExpired, openBotSessions, syncOpenBotSessions } from '../services/interviews.js'
 import { listApplications } from '../services/applications.js'
 import { listSessions } from '../services/interviews.js'
 import { useLive } from '../components/ui/useLive.js'
@@ -30,6 +30,21 @@ export default function ConsoleApp() {
   // schedule; here it runs when the console opens, which is the same idea.
   useEffect(() => {
     if (user) sweepExpired()
+  }, [user])
+
+  // AI voice calls run on the InterviewBot server. While the console is open,
+  // it checks the open ones every 15 seconds: started, finished, report ready.
+  useEffect(() => {
+    if (!user) return
+    let busy = false
+    const tick = async () => {
+      if (busy || !openBotSessions().length) return
+      busy = true
+      try { await syncOpenBotSessions() } finally { busy = false }
+    }
+    tick()
+    const t = setInterval(tick, 15000)
+    return () => clearInterval(t)
   }, [user])
 
   if (!user) return <SignIn onSignedIn={setUser} />

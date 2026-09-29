@@ -12,8 +12,9 @@ import { sessionsFor, resendInvite } from '../../../services/interviews.js'
 import { STAGES } from '../../../domain/stages.js'
 import { downloadText } from '../../../lib/csv.js'
 import InviteDialog from '../jobs/InviteDialog.jsx'
+import InviteEmail from '../jobs/InviteEmail.jsx'
 import { MoveStage, NoteDialog, TagsDialog, FlagDialog, ShareDialog, MoveJobDialog, TagToJob } from './CandidateActions.jsx'
-import { inviteVars, jobVars } from './inviteVars.js'
+import { jobVars } from './inviteVars.js'
 
 /**
  * Every action a recruiter can take on a candidate, in one place, so the
@@ -40,10 +41,10 @@ export function useCandidateActions() {
       '-',
       app && !closed && (latest?.state === 'invited'
         ? { label: 'Resend interview link', onClick: () => {
-            const { url } = resendInvite(latest._id)
-            open('email', candidate, app, { template: 'interview_invite', vars: inviteVars(app, latest, url), title: 'Resend interview link' })
+            const { session, url } = resendInvite(latest._id)
+            open('resend', candidate, app, { session, url })
           } }
-        : { label: 'Send AI interview…', onClick: () => open('invite', candidate, app) }),
+        : { label: 'Send AI video interview…', onClick: () => open('invite', candidate, app) }),
       app && !closed && !app.interest && {
         label: 'Ask if interested (email)',
         hint: 'Optional — skip it if you already spoke to them',
@@ -90,6 +91,9 @@ export function useCandidateActions() {
           onClose={close}
         />
       )
+    }
+    if (kind === 'resend') {
+      element = <InviteEmail application={app} session={dialog.session} url={dialog.url} title="Resend interview link" onClose={close} />
     }
     if (kind === 'note') element = <NoteDialog app={app} onClose={close} />
     if (kind === 'tags') element = <TagsDialog candidate={candidate} onClose={close} />

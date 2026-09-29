@@ -282,7 +282,7 @@ function Row({ app, candidate: c, job, selected, onToggle, onInvite, onOpen, men
             </Badge>
           ) : latest ? (
             <Badge tone={latest.state === 'in_progress' ? 'warn' : latest.state === 'expired' ? 'bad' : 'info'}>
-              {{ invited: 'Link sent', in_progress: 'In progress', expired: 'Link expired', abandoned: 'Abandoned', cancelled: 'Cancelled' }[latest.state] ?? latest.state}
+              {{ invited: 'Link sent', in_progress: 'In progress', completed: 'Report on its way', expired: 'Link expired', abandoned: 'Abandoned', cancelled: 'Cancelled' }[latest.state] ?? latest.state}
             </Badge>
           ) : app.interest?.response ? (
             <span className="small">{app.interest.response === 'interested' ? '✓ Interested' : '✕ Not interested'}</span>
@@ -294,7 +294,7 @@ function Row({ app, candidate: c, job, selected, onToggle, onInvite, onOpen, men
           <div className="row" style={{ justifyContent: 'flex-end', gap: 4 }}>
             {summary?.state === 'completed' ? (
               <Link className="btn sm" to={`/interviews/${summary.session_id}`}>Report</Link>
-            ) : !closed && latest?.state !== 'invited' && latest?.state !== 'in_progress' ? (
+            ) : !closed && !['invited', 'in_progress', 'completed'].includes(latest?.state) ? (
               <button className="btn sm primary" onClick={onInvite}>Interview</button>
             ) : latest ? (
               <Link className="btn sm" to={`/interviews/${latest._id}`}>Status</Link>

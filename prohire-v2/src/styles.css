@@ -155,6 +155,8 @@ code, .mono { font-family: var(--mono); font-size: .92em; }
   .sidebar-foot { margin: 0; border: 0; padding: 0; }
   .grid.c2, .grid.c3, .grid.c4, .grid.split { grid-template-columns: 1fr; }
   .page { padding: 16px; }
+  /* Narrow screens: the title first, its buttons wrap underneath instead of running off. */
+  .topbar { flex-wrap: wrap; padding: 12px 16px; }
 }
 
 /* --- card ---------------------------------------------------------------- */
@@ -272,6 +274,54 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); }
 .table .num { text-align: right; font-variant-numeric: tabular-nums; }
 .table-wrap { overflow-x: auto; border-radius: var(--radius); }
 
+/* Candidates: the "Add candidate" choice, as a list. */
+.add-ways { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.add-ways li + li { border-top: 1px solid var(--border); }
+.add-way { width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; padding: 12px 14px; border: 0; background: var(--surface); color: var(--text); font: inherit; cursor: pointer; transition: background .12s; }
+.add-way:hover, .add-way:focus-visible { background: var(--accent-soft); outline: none; }
+.add-way-icon { flex: none; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 8px; background: var(--accent-soft); color: var(--accent); font-size: 15px; }
+.add-way-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.add-way-go { flex: none; color: var(--text-3); font-size: 20px; line-height: 1; }
+.add-way:hover .add-way-go { color: var(--accent); }
+
+/* Interview dialog: the AI video interview set-up. */
+.fixed-value { padding: 8px 11px; border: 1px dashed var(--border); border-radius: var(--radius-sm); background: var(--surface-2); color: var(--text-2); font-size: 13.5px; }
+.section-title { margin: 18px 0 8px; }
+.invite-facts { background: var(--surface-2); border-radius: 10px; padding: 12px 14px; }
+.qedit { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; }
+.qedit.left-out { border-style: dashed; opacity: .75; }
+.qedit.fixed { border-color: var(--accent-soft); background: var(--accent-soft); }
+.qedit.fixed .fixed-value { background: var(--surface); border-style: solid; color: var(--text); }
+.qedit textarea { min-height: 0; }
+.warn-text { color: var(--warn); font-weight: 500; }
+.bad-text { color: var(--bad); font-weight: 600; }
+/* Report: proctoring for the AI video interview. */
+.proctor-stats { gap: 7px 14px; }
+.proctor-stats dd { text-align: right; font-variant-numeric: tabular-nums; }
+.proctor-signals { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.proctor-signals li { border: 1px solid var(--border); border-left: 3px solid var(--warn); border-radius: var(--radius-sm); padding: 9px 11px; }
+.proctor-signals li.serious { border-left-color: var(--bad); background: var(--bad-soft); }
+.field-err { font-size: 12px; color: var(--bad); }
+
+/* Reports page: one row per interview report. */
+.reports-table { min-width: 860px; }
+.reports-table td { vertical-align: top; }
+.reports-table .report-who { max-width: 380px; }
+.reports-table .verdict { font-weight: 600; }
+.funnel-rows { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 32px; }
+@media (max-width: 720px) {
+  .funnel-rows { grid-template-columns: 1fr; }
+  /* On a phone each report is a small card: name on top, the facts in two columns. */
+  .reports-table { min-width: 0; }
+  .reports-table thead { display: none; }
+  .reports-table, .reports-table tbody { display: block; }
+  .reports-table tr { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .reports-table tbody tr:last-child { border-bottom: 0; }
+  .reports-table td, .reports-table td.num { display: block; padding: 0; border: 0; text-align: left; }
+  .reports-table .report-who { grid-column: 1 / -1; max-width: none; }
+  .reports-table td[data-label]::before { content: attr(data-label); display: block; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--text-3); margin-bottom: 3px; }
+}
+
 /* --- tabs ---------------------------------------------------------------- */
 
 .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); overflow-x: auto; }
@@ -362,6 +412,7 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); }
 }
 .toast.good { border-left-color: var(--good); }
 .toast.bad  { border-left-color: var(--bad); }
+.toast.warn { border-left-color: var(--warn); }
 @keyframes slide { from { opacity: 0; transform: translateX(14px); } }
 
 /* --- candidate-facing interview ------------------------------------------ */

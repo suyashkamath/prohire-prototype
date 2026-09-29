@@ -83,3 +83,28 @@ button.icon { padding: 4px 9px; }
 .qlist li { margin: 4px 0; }
 .table-wrap { overflow-x: auto; }
 @media (max-width: 600px) { .step { font-size: 12.5px; padding: 8px 4px; } }
+
+/* report */
+.badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-weight: 700; font-size: 13px; background: var(--surface-2); }
+.badge.good { background: var(--good-soft); color: var(--good); }
+.badge.warn { background: var(--warn-soft); color: var(--warn); }
+.badge.bad { background: var(--bad-soft); color: var(--bad); }
+.outcome { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 14px; border-radius: 8px; background: var(--surface-2); }
+.outcome .small.muted { text-align: right; }
+.tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.tile { background: var(--surface-2); border-radius: 8px; padding: 10px 12px; }
+.tile-v { font-size: 20px; font-weight: 700; }
+.tile-v span { font-size: 13px; font-weight: 500; color: var(--text-3); }
+.tile.big .tile-v { font-size: 24px; }
+table.skills td { vertical-align: top; font-size: 13px; }
+td.num, th.num { text-align: right; white-space: nowrap; }
+.plain-list { margin: 4px 0 0; padding-left: 18px; }
+.plain-list li { margin: 3px 0; }
+
+/* proctoring signals on the review page */
+.signals { display: flex; flex-direction: column; gap: 8px; margin: 8px 0; }
+.signal { border-left: 3px solid var(--warn); padding: 4px 0 4px 10px; }
+.signal.serious { border-left-color: var(--bad); }
+.chip.warn { background: var(--warn-soft); color: var(--warn); }
+.chip.bad { background: var(--bad-soft); color: var(--bad); }
+a.seek { white-space: nowrap; margin-right: 6px; }

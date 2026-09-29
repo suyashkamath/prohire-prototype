@@ -506,6 +506,138 @@ check('Delete removes their applications and sessions',
 check('Email templates fill placeholders', renderTemplate('Hi {{candidate_name}}, {{link}}', { candidate_name: 'Divya', link: 'L' }) === 'Hi Divya, L')
 check('Unknown placeholders stay visible', renderTemplate('{{nope}}', {}) === '{{nope}}')
 
+// --- Act 7: the AI voice call, run by the InterviewBot server ----------------
+// A fake InterviewBot stands in for the real one, so this never reaches a real
+// server (or a real candidate).
+
+const botCalls = []
+const fakeBot = new Map()
+globalThis.fetch = async (url, opts = {}) => {
+  const u = new URL(url)
+  const body = opts.body ? JSON.parse(opts.body) : null
+  botCalls.push({ path: u.pathname, method: opts.method ?? 'GET', body })
+  const reply = (data, status = 200) => ({ ok: status < 400, status, json: async () => data })
+  if (u.pathname === '/api/prohire/sessions') {
+    const id = `bot${fakeBot.size + 1}`
+    fakeBot.set(id, { id, status: 'ready', turns: [], events: [], plan: body, report: null, recording: null })
+    return reply({ id, url: `http://bot.test/interview/${id}` })
+  }
+  let m = u.pathname.match(/^\/api\/sessions\/(\w+)$/)
+  if (m) return fakeBot.has(m[1]) ? reply(fakeBot.get(m[1])) : reply({ detail: 'No session' }, 404)
+  m = u.pathname.match(/^\/api\/prohire\/sessions\/(\w+)\/invite$/)
+  if (m) return reply({ ok: true })
+  return reply({ detail: 'Not found' }, 404)
+}
+
+const { toBotPlan, reportFromBot } = await import('../src/domain/interviewBot.js')
+const meera = await ingestResume({
+  filename: 'meera.txt',
+  text: 'Meera Iyer\nmeera.iyer@example.com | 9811122233\nPune, Maharashtra\nWorking as Software Engineer at Zenith Tech\nTotal experience: 3 years\nLanguages: English, Hindi\nSKILLS\nC#, ASP.NET Core, SQL Server',
+})
+const { application: vcApp } = apps.createApplication({ candidate_id: meera.candidate._id, job_id: job._id })
+const recruiterQuestions = [
+  { id: 'r1', text: 'Walk me through how you tuned a slow SQL Server query.', text_hi: 'आपने एक धीमी SQL Server query को कैसे tune किया, बताइए।', type: 'open', competency: 'technical', weight: 2, must_ask: true },
+  { id: 'r2', text: 'Why are you looking to move from Zenith Tech?', type: 'open', competency: 'experience', weight: 1, must_ask: false },
+]
+const call = await iv.invite(vcApp._id, {
+  rules: { mode: 'call', language: 'hi-IN', duration_minutes: 15, answer_pause_seconds: 3, instructions: 'Keep it friendly.', proctoring: { tab_switch_warning: true, auto_terminate: false } },
+  questions: recruiterQuestions,
+})
+const sent = botCalls.find((c) => c.path === '/api/prohire/sessions').body
+check('Voice call: the link sent is the call server’s', call.url === 'http://bot.test/interview/bot1', call.url)
+check('Voice call: candidate details come from their record', sent.candidate.name === 'Meera Iyer' && sent.candidate.experience_years === 3 && sent.candidate.skills.includes('SQL Server'))
+check('Voice call: it opens with "Tell me about yourself"', sent.questions[0].id === 'intro' && sent.questions[0].text === 'Tell me about yourself.' && sent.questions[0].text_hi === 'अपने बारे में बताइए।' && sent.questions[0].must_ask)
+check('Voice call: then the recruiter’s questions, as set', sent.questions.length === 3 && sent.questions[1].text_hi.startsWith('आपने') && sent.questions[1].must_ask && sent.questions[2].id === 'r2')
+check('Voice call: the recruiter’s settings go across', sent.settings.language === 'Hindi' && sent.settings.duration_minutes === 15 && sent.settings.answer_pause_seconds === 3 && sent.settings.instructions === 'Keep it friendly.')
+check('Voice call: "warn only" never ends the call', sent.settings.max_tab_switches === 99)
+check('Voice call: the call knows its ProHire records and expiry', sent.prohire.session_id === call.session._id && Boolean(sent.prohire.expires_at))
+check('Voice call: our own link forwards to the call', iv.bootstrap(call.session.invite.token).redirect === call.url)
+check('Voice call: stage moved to invited', apps.getApplication(vcApp._id).stage === 'invited')
+
+const bs = fakeBot.get('bot1')
+bs.status = 'live'
+bs.started_at = '2026-09-29T10:00:00.000+00:00'
+bs.turns = [{ role: 'interviewer', text: 'नमस्ते Meera', at: '2026-09-29T10:00:01.000+00:00' }]
+await iv.syncBotSession(call.session._id)
+check('Voice call: started on the server → in progress here', iv.getSession(call.session._id).state === 'in_progress' && apps.getApplication(vcApp._id).stage === 'interview_in_progress')
+
+Object.assign(bs, {
+  status: 'ended', ended_at: '2026-09-29T10:09:00.000+00:00', end_reason: 'interviewer_closed', recording: 'bot1.webm',
+  turns: [...bs.turns, { role: 'candidate', text: 'मैंने index जोड़ा और query 4 second से 200 ms पर आ गई।', at: '2026-09-29T10:01:00.000+00:00' }],
+  events: [{ kind: 'tab_switch', at: '2026-09-29T10:03:00.000+00:00' }],
+})
+await iv.syncBotSession(call.session._id)
+const ended = iv.getSession(call.session._id)
+check('Voice call: ended with answers → completed', ended.state === 'completed' && ended.duration_seconds === 540 && ended.end_reason === 'interviewer_closed')
+check('Voice call: the transcript comes across', ended.turns.length === 2 && ended.turns[1].role === 'candidate' && ended.turns[1].words > 0)
+check('Voice call: tab switches come across', ended.integrity.tab_switches === 1)
+check('Voice call: the recording is linked, not copied', ended.recording.url === 'http://localhost:8000/api/sessions/bot1/recording')
+check('Voice call: no report until the server has written one', !iv.getReportForSession(call.session._id))
+
+bs.report = {
+  generated_at: '2026-09-29T10:10:00+00:00', outcome: 'shortlist', recommendation: 'shortlist', overall: 7.4, technical: 7.8, soft: 6.5, pass_mark: 7,
+  skills: [{ skill: 'SQL Server', primary: false, asked: true, score: 7.8, evidence: 'मैंने index जोड़ा', strength: 'Numbers', improvement: '', interpretation: '' }, { skill: 'C#', asked: false, score: null }],
+  soft_skills: { fluency: { score: 7, reason: 'Clear' }, confidence: { score: 6, reason: '' }, composure: { score: 7, reason: '' }, communication: { score: 6, reason: '' } },
+  questions: [{ question: recruiterQuestions[0].text, answered: true, summary: 'Added an index; 4s → 200ms.' }, { question: recruiterQuestions[1].text, answered: false, summary: '' }],
+  evidence: { candidate_words: 80, answered: 1, planned: 2, enough: true },
+  strengths: ['Gave a measured result.'], concerns: [], ask_next_round: ['Ask about query plans.'],
+  summary: 'Short, specific interview.', rationale: 'Overall 7.4/10 against a pass mark of 7/10.',
+  proctoring: { level: 'review', verdict: 'Worth a look.', signals: [{ kind: 'tab_switch', label: 'Left the tab once' }], tab_switches: 1, auto_terminated: false },
+}
+await iv.syncBotSession(call.session._id)
+const vcReport = iv.getReportForSession(call.session._id)
+check('Voice call: the server’s report arrives', Boolean(vcReport) && vcReport.source === 'interview_bot')
+check('Voice call: scores out of 10 become out of 100', vcReport.overall_score === 74 && vcReport.skills[0].score === 78)
+check('Voice call: unasked skills stay unscored', vcReport.skills.length === 1)
+check('Voice call: questions matched to the plan', vcReport.per_question[0].question_id === 'intro' && vcReport.per_question[1].question_id === 'r1' && vcReport.per_question[1].answered && !vcReport.per_question[2].answered)
+check('Voice call: an unmatched question is not given another one’s answer', !vcReport.per_question[0].answered && vcReport.per_question[0].rationale === '')
+check('Voice call: the pipeline shows the result', apps.getApplication(vcApp._id).interview_summary.overall_score === 74)
+check('Voice call: integrity signs come across', vcReport.integrity.level === 'medium' && vcReport.integrity.tab_switches === 1)
+const { fairnessFromBot } = await import('../src/domain/interviewBot.js')
+const live = fairnessFromBot({ status: 'live', events: [
+  { kind: 'multiple_faces', detail: { seconds: 4 } }, { kind: 'multiple_faces', detail: { seconds: 2.5 } },
+  { kind: 'looking_away', detail: { seconds: 12 } }, { kind: 'tab_switch' }, { kind: 'window_blur', detail: { seconds: 7 } },
+] })
+check('Proctoring: while it runs, the live events are added up', live.camera === 'running' && live.seconds.multiple_faces === 6.5 && live.seconds.looking_away === 12 && live.tab_switches === 1 && live.window_away_seconds === 7)
+const done = fairnessFromBot({ status: 'ended', events: [], proctoring: {
+  face_check: 'on', face_visible_share: 0.93, people_check: 'faces and people', screen_extended: true, virtual_camera: 'OBS Virtual Camera',
+  totals: { multiple_faces: 0, no_face: 3, looking_away: 41, voice_without_lips: 0, phone_visible: 6 },
+  answers: [{ reading_like: true, from_s: 60 }, { reading_like: false }, { reading_like: false }],
+}, voice_check: { status: 'done', level: 'serious', other_seconds: 9, segments: [{ prompted: true, text: 'say forty', at_s: 70 }] } })
+check('Proctoring: the final summary is used once it arrives', done.camera === 'on' && done.face_visible_share === 0.93 && done.seconds.looking_away === 41 && done.seconds.phone_visible === 6)
+check('Proctoring: reading, second display and camera software come across', done.reading_answers === 1 && done.answers_checked === 3 && done.second_display && done.virtual_camera === 'OBS Virtual Camera')
+check('Proctoring: other voices and prompting come across', done.voice_check.status === 'done' && done.voice_check.prompted && done.voice_check.other_seconds === 9)
+check('Proctoring: no summary after the end is reported as not received', fairnessFromBot({ status: 'ended', events: [] }).camera === 'not_received')
+check('Proctoring: the findings are kept on the ProHire session', iv.getSession(call.session._id).fairness?.tab_switches === 1 && iv.getSession(call.session._id).fairness.camera === 'not_received')
+const callsBefore = botCalls.length
+await iv.syncBotSession(call.session._id)
+check('Voice call: a finished call is not re-imported', iv.openBotSessions().every((s) => s._id !== call.session._id) && botCalls.length === callsBefore + 1)
+const thin = reportFromBot({ outcome: 'insufficient', recommendation: 'hold', evidence: { enough: false, answered: 0, planned: 2 } }, { plan: ended.plan })
+check('Voice call: thin evidence stays "hold", low confidence', thin.recommendation === 'hold' && thin.confidence === 'low')
+
+const { application: vcApp2 } = apps.createApplication({ candidate_id: (await ingestResume({ filename: 'kabir.txt', text: 'Kabir Rao\nkabir@example.com | 9811100000\nTotal experience: 2 years\nSKILLS\nC#' })).candidate._id, job_id: job._id })
+const call2 = await iv.invite(vcApp2._id, { rules: { mode: 'call' } })
+iv.resendInvite(call2.session._id)
+await new Promise((r) => setTimeout(r, 0))
+check('Voice call: resending extends the call link too', botCalls.some((c) => c.path === `/api/prohire/sessions/${call2.session.bot.id}/invite` && c.body.expires_at))
+iv.cancelSession(call2.session._id)
+await new Promise((r) => setTimeout(r, 0))
+check('Voice call: cancelling closes the call link', botCalls.some((c) => c.path === `/api/prohire/sessions/${call2.session.bot.id}/invite` && c.body.cancel))
+let refused = ''
+try { await iv.invite(vcApp2._id, { rules: { mode: 'call', language: 'ta-IN' } }) } catch (err) { refused = err.message }
+check('Voice call: only English or Hindi', refused.includes('English or Hindi'))
+const direct = toBotPlan({ plan: ended.plan, job: null, candidate: null, company: 'X' })
+check('Voice call: a frozen plan alone is enough to build the call', direct.candidate.name === 'Meera Iyer' && direct.questions.length === 3)
+const introLayers = [{ source: 'org', rules: { mode: 'call', duration_minutes: 30, max_questions: 8 }, questions: [
+  { id: 'a', text: 'Tell me a bit about yourself and your background.', type: 'open', competency: 'experience', weight: 1 },
+  { id: 'b', text: 'Why this role?', type: 'open', competency: 'experience', weight: 1 },
+] }]
+const introPlan = resolvePlan(introLayers, {})
+check('Every AI video interview starts with "Tell me about yourself"', introPlan.questions[0].id === 'intro' && introPlan.questions[0].must_ask)
+check('A second "tell me about yourself" is dropped, not asked twice', introPlan.questions.filter((q) => /about yourself/i.test(q.text)).length === 1 && introPlan.questions.length === 2)
+check('The opening question cannot be left out by an invite', resolvePlan([...introLayers, { source: 'invite', questions: [{ id: 'z', text: 'Only this?', type: 'open', competency: 'experience', weight: 1 }] }], {}).questions.map((q) => q.id).join() === 'intro,z')
+check('Interviews in the older formats are unchanged', resolvePlan([{ ...introLayers[0], rules: { mode: 'video' } }], {}).questions[0].id === 'a')
+
 // --- report --------------------------------------------------------------
 
 console.log(`\n  ${pass.length} passed, ${fail.length} failed\n`)

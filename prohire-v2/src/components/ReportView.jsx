@@ -13,6 +13,7 @@ import { useRef } from 'react'
 
 import { Card, Badge, Bar } from './ui/index.jsx'
 import RecordingPlayer from './RecordingPlayer.jsx'
+import ProctoringCard from './ProctoringCard.jsx'
 import { formatDateTime, mmss, lpa } from '../lib/format.js'
 import { STRICTNESS } from '../domain/resolvePlan.js'
 
@@ -21,6 +22,16 @@ const REC = {
   hold:      { label: 'Hold — review', tone: 'warn', mark: '◐' },
   reject:    { label: 'Not recommended', tone: 'bad', mark: '✕' },
 }
+
+// Soft skills, in the order a hiring manager asks. A report shows the ones it has:
+// ProHire's own interview scores three, the AI voice call scores four.
+const COMMUNICATION = [
+  ['fluency', 'Fluency', 'Speaks in full, connected answers'],
+  ['confidence', 'Confidence', 'Answers directly, without hedging'],
+  ['composure', 'Composure', 'Stays steady under follow-ups'],
+  ['clarity', 'Clarity', 'Easy to follow'],
+  ['communication', 'Communication', 'Gets the point across'],
+]
 
 const INTEGRITY = [
   ['tab_switches', 'Left the interview tab'],
@@ -51,6 +62,13 @@ export default function ReportView({ report, session, candidate, variant = 'cons
     return Math.max(0, (new Date(asked.at).getTime() - recordingStart) / 1000)
   }
   const answersFor = (questionId) => session.turns.filter((t) => t.question_id === questionId)
+  // Proctoring times are seconds from the start of the interview.
+  const seekSeconds = (s) => {
+    if (!videoRef.current) return
+    videoRef.current.currentTime = Math.max(0, s - 2)
+    videoRef.current.play?.()
+    videoRef.current.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
+  }
 
   const integrity = report.integrity ?? {
     tab_switches: session.integrity?.tab_switches ?? 0, total: session.integrity?.tab_switches ?? 0, level: 'none',
@@ -81,6 +99,7 @@ export default function ReportView({ report, session, candidate, variant = 'cons
         </div>
 
         <p style={{ fontSize: 15.5, marginTop: 14, marginBottom: 0 }}>{report.headline}</p>
+        {report.summary && <p className="muted" style={{ marginTop: 8, marginBottom: 0, lineHeight: 1.6 }}>{report.summary}</p>}
         {report.recommendation_reason && (
           <div className="note mt"><strong>Why:</strong> {report.recommendation_reason}</div>
         )}
@@ -116,6 +135,7 @@ export default function ReportView({ report, session, candidate, variant = 'cons
                       <span className="tabular">{s.out_of_10}/10</span>
                     </div>
                     <Bar value={s.score} />
+                    {s.evidence && <div className="quote" style={{ marginTop: 6 }}>“{s.evidence}”</div>}
                   </div>
                 ))}
               </div>
@@ -146,7 +166,7 @@ export default function ReportView({ report, session, candidate, variant = 'cons
             </Card>
           )}
 
-          {hasInterview && (plan.rules.mode === 'video' || plan.rules.mode === 'voice') && (
+          {hasInterview && ['video', 'voice', 'call'].includes(plan.rules.mode) && (
             <Card title="Recording">
               <RecordingPlayer
                 session={session} videoRef={videoRef}
@@ -166,7 +186,7 @@ export default function ReportView({ report, session, candidate, variant = 'cons
                         <div className="between" style={{ alignItems: 'flex-start' }}>
                           <strong style={{ flex: 1 }}>Q{i + 1}. {p.question}</strong>
                           <span className="badge lg" style={{ flex: 'none', marginLeft: 10 }}>
-                            {p.answered ? `${p.score * 2}/10` : 'not answered'}
+                            {!p.answered ? 'not answered' : p.score == null ? 'answered' : `${p.score * 2}/10`}
                           </span>
                         </div>
                         {answersFor(p.question_id).filter((t) => t.kind !== 'question').map((t) => (
@@ -191,6 +211,12 @@ export default function ReportView({ report, session, candidate, variant = 'cons
                   )
                 })}
               </div>
+              {plan.rules.mode === 'call' && (
+                <p className="small muted" style={{ marginTop: 12, marginBottom: 0 }}>
+                  The AI video interview is a conversation, so answers are summarised per question here — the full
+                  conversation is in the Transcript tab.
+                </p>
+              )}
             </Card>
           )}
         </div>
@@ -199,17 +225,14 @@ export default function ReportView({ report, session, candidate, variant = 'cons
           {report.communication && (
             <Card title="Communication">
               <div className="col" style={{ gap: 12 }}>
-                {[
-                  ['fluency', 'Fluency', 'Speaks in full, connected answers'],
-                  ['confidence', 'Confidence', 'Answers directly, without hedging'],
-                  ['clarity', 'Clarity', 'Easy to follow'],
-                ].map(([k, label, hint]) => (
+                {COMMUNICATION.filter(([k]) => report.communication[k] != null).map(([k, label, hint]) => (
                   <div key={k}>
                     <div className="between" style={{ marginBottom: 4 }}>
                       <span><strong>{label}</strong> <span className="dim small">· {hint}</span></span>
                       <span className="tabular">{Math.round(report.communication[k] / 10)}/10</span>
                     </div>
                     <Bar value={report.communication[k]} />
+                    {report.communication.reasons?.[k] && <div className="small muted" style={{ marginTop: 4 }}>{report.communication.reasons[k]}</div>}
                   </div>
                 ))}
               </div>
@@ -229,7 +252,14 @@ export default function ReportView({ report, session, candidate, variant = 'cons
             </Card>
           )}
 
-          {hasInterview && (
+          {hasInterview && session.bot && (
+            <ProctoringCard
+              integrity={integrity} fairness={session.fairness}
+              durationSeconds={session.duration_seconds} onSeek={seekSeconds}
+            />
+          )}
+
+          {hasInterview && !session.bot && (
             <Card title="Integrity">
               {integrity.auto_terminated && (
                 <div className="note bad small mb"><strong>Ended automatically</strong> — {integrity.reason}.</div>
@@ -277,6 +307,14 @@ export default function ReportView({ report, session, candidate, variant = 'cons
               )}
             </dl>
           </Card>
+
+          {report.observations?.length > 0 && (
+            <Card title="Observations">
+              <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7 }}>
+                {report.observations.map((s, i) => <li key={i}>{s}</li>)}
+              </ul>
+            </Card>
+          )}
 
           <Card title="Strengths">
             <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7 }}>

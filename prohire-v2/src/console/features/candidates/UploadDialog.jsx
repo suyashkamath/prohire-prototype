@@ -4,7 +4,7 @@ import { Modal, Field, Select, Badge } from '../../../components/ui/index.jsx'
 import { useToast } from '../../../components/ui/toastContext.js'
 import { ingestResume } from '../../../services/candidates.js'
 import { createApplication, screenBatch } from '../../../services/applications.js'
-import { isReadableAsText, readFileAsText } from '../../../domain/parsing.js'
+import { extractResumeText, RESUME_ACCEPT } from '../../../lib/resumeFiles.js'
 import { listJobs } from '../../../services/jobs.js'
 
 /**
@@ -26,7 +26,8 @@ export default function UploadDialog({ defaultJobId, onClose }) {
 
   const jobs = listJobs({ status: 'active' })
 
-  async function ingest(items) {
+  // `failed`: files that could not be read at all, reported alongside the rest.
+  async function ingest(items, failed = []) {
     setBusy(`Reading ${items.length} resume${items.length === 1 ? '' : 's'}…`)
     const out = []
     const appIds = []
@@ -43,7 +44,7 @@ export default function UploadDialog({ defaultJobId, onClose }) {
           })
           appIds.push(application._id)
         }
-        out.push({ ...res, filename: item.filename })
+        out.push({ ...res, filename: item.filename, warning: item.warning })
       } catch (err) {
         out.push({ outcome: 'error', filename: item.filename, error: err.message })
       }
@@ -56,29 +57,37 @@ export default function UploadDialog({ defaultJobId, onClose }) {
       })
     }
 
-    setResults(out)
+    setResults([...out, ...failed])
     setBusy(null)
     const created = out.filter((r) => r.outcome === 'created').length
-    toast(`${created} added, ${out.length - created} matched an existing record.`, 'good')
+    const errors = out.filter((r) => r.outcome === 'error').length + failed.length
+    toast(
+      `${created} added, ${out.length - created - (errors - failed.length)} matched an existing record${errors ? `, ${errors} could not be read` : ''}.`,
+      errors ? 'warn' : 'good',
+    )
   }
 
   async function onFiles(fileList) {
     const files = [...fileList]
-    const readable = files.filter(isReadableAsText)
-    const unreadable = files.filter((f) => !isReadableAsText(f))
-
-    if (unreadable.length) {
-      toast(
-        `${unreadable.length} file${unreadable.length === 1 ? '' : 's'} skipped — PDF and DOCX need server-side extraction. Paste the text instead.`,
-        'bad',
-      )
+    if (!files.length) return
+    const items = []
+    const failed = []
+    for (const [i, file] of files.entries()) {
+      setBusy(`Reading file ${i + 1} of ${files.length}…`)
+      try {
+        const { text, warning } = await extractResumeText(file)
+        items.push({ filename: file.name, text, warning })
+      } catch (err) {
+        failed.push({ outcome: 'error', filename: file.name, error: err.message })
+      }
     }
-    if (!readable.length) return
-
-    const items = await Promise.all(
-      readable.map(async (f) => ({ filename: f.name, text: await readFileAsText(f) })),
-    )
-    await ingest(items)
+    if (fileRef.current) fileRef.current.value = ''     // the same file can be picked again
+    if (!items.length) {
+      setBusy(null)
+      setResults(failed)
+      return
+    }
+    await ingest(items, failed)
   }
 
   if (results.length) {
@@ -100,7 +109,10 @@ export default function UploadDialog({ defaultJobId, onClose }) {
               <tr key={i}>
                 <td className="small truncate" style={{ maxWidth: 180 }}>{r.filename}</td>
                 <td>{r.candidate?.full_name ?? <span className="dim">—</span>}</td>
-                <td><OutcomeBadge result={r} /></td>
+                <td>
+                  <OutcomeBadge result={r} />
+                  {r.warning && <div className="small muted" style={{ marginTop: 4 }}>{r.warning}</div>}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -133,19 +145,19 @@ export default function UploadDialog({ defaultJobId, onClose }) {
         onDragLeave={() => setOver(false)}
         onDrop={(e) => { e.preventDefault(); setOver(false); onFiles(e.dataTransfer.files) }}
       >
-        <strong>Drop resumes here</strong>
-        <div className="small" style={{ marginTop: 4 }}>or click to choose files</div>
+        <strong>{busy ?? 'Drop resumes here'}</strong>
+        <div className="small" style={{ marginTop: 4 }}>
+          {busy ? 'This takes a moment for a PDF.' : 'or click to choose files — PDF, Word (.docx, .doc) or text, one or many'}
+        </div>
         <input
-          ref={fileRef} type="file" multiple hidden accept=".txt,.md,.csv,text/*"
+          ref={fileRef} type="file" multiple hidden accept={RESUME_ACCEPT}
           onChange={(e) => onFiles(e.target.files)}
         />
       </div>
-
-      <div className="note warn" style={{ marginTop: 12 }}>
-        <strong>Prototype limit:</strong> a browser cannot extract text from PDF or DOCX — that needs
-        poppler and python-docx on a server. Plain text works; for anything else, paste the text
-        below. Everything after extraction — parsing, dedupe, screening — is the real pipeline.
-      </div>
+      <p className="hint" style={{ marginTop: 8 }}>
+        Read in this browser; the files are not uploaded anywhere. A scanned PDF (a photo of the page) has
+        no text to read — paste its text below instead.
+      </p>
 
       <Field label="Or paste resume text" style={{ marginTop: 14 }}>
         <textarea
@@ -177,6 +189,8 @@ export default function UploadDialog({ defaultJobId, onClose }) {
 }
 
 function OutcomeBadge({ result }) {
+  // A reason to act on, not a status: it wraps, where a badge would not.
+  if (result.outcome === 'error') return <span className="field-err" style={{ fontSize: 13 }}>{result.error}</span>
   const map = {
     created:   ['good', 'New candidate'],
     merged:    ['info', `Matched on ${result.identity?.signal} — resume version added`],
