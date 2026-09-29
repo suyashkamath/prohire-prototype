@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { useLive } from '../../../components/ui/useLive.js'
@@ -12,6 +12,53 @@ import { recentActivity } from '../../../services/core.js'
 import { relative } from '../../../lib/format.js'
 import { seed, isSeeded } from '../../../lib/seed.js'
 
+// Light or dark, for the Dashboard only. The rest of the console follows the
+// computer's setting. The choice is remembered in this browser; with none
+// saved, the Dashboard follows the computer too.
+const THEME_KEY = 'prohire.v2.dashboard_theme'
+
+function savedTheme() {
+  try {
+    const v = localStorage.getItem(THEME_KEY)
+    return v === 'light' || v === 'dark' ? v : null
+  } catch {
+    return null
+  }
+}
+
+const systemTheme = () =>
+  typeof matchMedia !== 'undefined' && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+
+function useDashboardTheme() {
+  const [theme, setTheme] = useState(() => savedTheme() ?? systemTheme())
+
+  // Applied while the Dashboard is on screen; leaving it hands back to the system.
+  useEffect(() => {
+    const root = document.documentElement
+    root.dataset.theme = theme
+    root.style.colorScheme = theme
+    return () => {
+      delete root.dataset.theme
+      root.style.colorScheme = ''
+    }
+  }, [theme])
+
+  const choose = (t) => {
+    setTheme(t)
+    try { localStorage.setItem(THEME_KEY, t) } catch { /* private window: this visit only */ }
+  }
+  return [theme, choose]
+}
+
+function ThemeSwitch({ theme, onChange }) {
+  return (
+    <div className="seg" role="group" aria-label="Dashboard theme">
+      <button className={theme === 'light' ? 'on' : ''} aria-pressed={theme === 'light'} onClick={() => onChange('light')}>☀ Light</button>
+      <button className={theme === 'dark' ? 'on' : ''} aria-pressed={theme === 'dark'} onClick={() => onChange('dark')}>☾ Dark</button>
+    </div>
+  )
+}
+
 /**
  * Counts that lead to a click — not a metrics wall.
  *
@@ -22,6 +69,7 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const toast = useToast()
   const [seeding, setSeeding] = useState(null)
+  const [theme, setTheme] = useDashboardTheme()
 
   const data = useLive(() => {
     const jobs = listJobs({ status: 'active' })
@@ -57,7 +105,11 @@ export default function Dashboard() {
   if (data.empty) {
     return (
       <>
-        <div className="topbar"><h1>Dashboard</h1></div>
+        <div className="topbar">
+          <h1>Dashboard</h1>
+          <div className="spacer" />
+          <ThemeSwitch theme={theme} onChange={setTheme} />
+        </div>
         <div className="page">
           <Card>
             <Empty
@@ -86,7 +138,7 @@ export default function Dashboard() {
       <div className="topbar">
         <h1>Dashboard</h1>
         <div className="spacer" />
-        <Link className="btn" to="/candidates">Add candidates</Link>
+        <ThemeSwitch theme={theme} onChange={setTheme} />
         <Link className="btn primary" to="/jobs/new">New job</Link>
       </div>
 

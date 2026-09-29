@@ -19,7 +19,7 @@ export const DEFAULT_TEMPLATES = {
 
 Thank you for your interest in the {{job_title}} role ({{job_reference}}) at {{company}}.
 
-As the next step, please complete a short online interview with {{persona}}, our AI interviewer. It takes about {{duration}} minutes and will be conducted in {{language}}.
+As the next step, please complete a short online video interview with {{persona}}, our AI interviewer. It takes about {{duration}} minutes and will be conducted in {{language}}.
 
 Start your interview here:
 {{link}}

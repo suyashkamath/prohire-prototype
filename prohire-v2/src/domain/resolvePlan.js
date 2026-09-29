@@ -43,10 +43,31 @@ export const ASSESSMENT_TYPES = {
 }
 
 export const INTERVIEW_MODES = {
+  // The AI screening round: every new interview is this one. The others stay so
+  // interviews sent before still read correctly.
+  call:  { label: 'AI video interview', detail: 'A live spoken interview with the AI interviewer, on camera and recorded, in English or Hindi.' },
   video: { label: 'Video', detail: 'Camera on, recorded. Questions are spoken aloud.' },
   voice: { label: 'Voice', detail: 'Questions spoken aloud; candidate speaks or types.' },
   text:  { label: 'Typed', detail: 'Questions on screen; candidate types answers.' },
 }
+
+/**
+ * Every AI video interview opens with this, before any other question. It is
+ * added when the plan is built, so no job, candidate or invite can leave it
+ * out, and a copy of it elsewhere in the list is dropped rather than asked twice.
+ */
+export const INTRO_QUESTION = {
+  id: 'intro',
+  text: 'Tell me about yourself.',
+  text_hi: 'अपने बारे में बताइए।',
+  type: 'open',
+  competency: 'communication',
+  weight: 1,
+  must_ask: true,
+  fixed: true,
+}
+const INTRO_RE = /\btell (me|us) (a (little|bit) )?(more )?about yourself\b|अपने बारे में (कुछ )?(बताइए|बताइये|बताओ|बताएं)/i
+export const isIntroQuestion = (q) => q?.id === INTRO_QUESTION.id || INTRO_RE.test(q?.text ?? '')
 
 /** The org default. Always exists, so configuration is never required (§11.4). */
 export const ORG_DEFAULT_RULES = {
@@ -59,6 +80,10 @@ export const ORG_DEFAULT_RULES = {
   max_questions: 8,
   follow_ups_per_question: 1,
   allow_retake: false,
+  // AI voice call only: what the interviewer is told beyond the questions, and
+  // how long a silence ends an answer (shorter pauses are the candidate thinking).
+  instructions: '',
+  answer_pause_seconds: 2.5,
   // Integrity rules. Tab switches get a visible warning each time; one more
   // than `max_tab_switches` ends the interview when `auto_terminate` is on.
   proctoring: {
@@ -80,6 +105,7 @@ export const DEFAULT_COMPETENCIES = [
 const SCALAR_RULES = [
   'strictness', 'language', 'duration_minutes', 'light_mode', 'mode',
   'assessment_type', 'max_questions', 'follow_ups_per_question', 'allow_retake',
+  'instructions', 'answer_pause_seconds',
 ]
 
 /**
@@ -201,6 +227,11 @@ export function resolvePlan(layers, { job, candidate } = {}) {
   const lang = LANGUAGES.find((l) => l.code === rules.language) ?? LANGUAGES[0]
   persona = { ...persona, voice_id: lang.voice, language_label: lang.label }
 
+  // The AI video interview always starts with "Tell me about yourself".
+  if (rules.mode === 'call' && rules.assessment_type !== 'qualification') {
+    questions = [{ ...INTRO_QUESTION }, ...questions.filter((q) => !isIntroQuestion(q))]
+  }
+
   // Trim to the question budget, dropping optional questions lowest-weight
   // first — never a must_ask (§12.5).
   //
@@ -282,6 +313,16 @@ export function validatePlan(plan) {
   const mustAsk = plan.questions.filter((q) => q.must_ask).length
 
   const type = plan.rules.assessment_type ?? 'interview'
+  if (plan.rules.mode === 'call') {
+    // The voice agent speaks English and Hindi, and it runs the conversation
+    // only — a typed questionnaire is sent as its own assessment.
+    if (!['en-IN', 'hi-IN'].includes(plan.rules.language)) {
+      problems.push('The AI video interview runs in English or Hindi. Choose one of those.')
+    }
+    if (type !== 'interview') {
+      problems.push('The AI video interview is the interview only; it has no typed questionnaire.')
+    }
+  }
   if (type !== 'qualification' && plan.questions.length === 0) {
     problems.push('This plan has no interview questions.')
   }

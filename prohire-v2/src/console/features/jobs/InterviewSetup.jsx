@@ -5,7 +5,8 @@ import { useToast } from '../../../components/ui/toastContext.js'
 import {
   orgTemplate, listTemplates, saveTemplate, ensureJobQuestions, ensureQualification, affectedInvitedCount,
 } from '../../../services/interviews.js'
-import { resolvePlan, STRICTNESS, ASSESSMENT_TYPES, INTERVIEW_MODES } from '../../../domain/resolvePlan.js'
+import { resolvePlan, STRICTNESS, INTERVIEW_MODES, isIntroQuestion } from '../../../domain/resolvePlan.js'
+import { BOT_LANGUAGES } from '../../../domain/interviewBot.js'
 import { QUALIFICATION_KINDS, describeKnockout } from '../../../domain/qualification.js'
 import { screenQuestion } from '../../../domain/ai.js'
 import { languageOptions, ALLOWED_DURATIONS } from '../../../domain/locations.js'
@@ -34,11 +35,14 @@ export default function InterviewSetup({ job }) {
       rules: { language: job.interview_language_default },
     },
     tpl && { source: 'this job', ...tpl },
+    // What an invite sends: the AI video interview (see InviteDialog).
+    { source: 'AI video interview', rules: { mode: 'call', assessment_type: 'interview' } },
   ].filter(Boolean)
 
   const plan = resolvePlan(layers, { job })
   const affected = tpl ? affectedInvitedCount(tpl._id) : 0
-  const type = plan.rules.assessment_type
+  // The screening round is the AI video interview only — no typed questionnaire.
+  const type = 'interview'
   const p = plan.rules.proctoring ?? {}
 
   const base = () => ({
@@ -66,13 +70,18 @@ export default function InterviewSetup({ job }) {
   const patchQuestions = (questions) => saveTemplate({ ...base(), questions })
   const patchQualification = (qualification) => saveTemplate({ ...base(), qualification })
 
+  // The job's own questions: the fixed opening question is added to every
+  // interview, never stored with the job.
+  const own = () => (tpl?.questions ?? plan.questions).filter((q) => !isIntroQuestion(q))
+  const ownCount = plan.questions.filter((q) => !isIntroQuestion(q)).length
+
   const addQuestion = () => {
     const text = newQuestion.trim()
     if (!text) return
     const check = screenQuestion(text)
     if (!check.ok) return toast(check.reason, 'bad')
     patchQuestions([
-      ...(tpl?.questions ?? plan.questions),
+      ...own(),
       { id: newQuestionId('j'), text, type: 'open', competency: 'experience', weight: 2, must_ask: false },
     ])
     setNewQuestion('')
@@ -94,27 +103,35 @@ export default function InterviewSetup({ job }) {
               title={`Interview questions (${plan.questions.length})`}
               actions={
                 <button className="btn sm" onClick={generate} disabled={generating}>
-                  {generating ? 'Preparing…' : plan.questions.length ? 'Start again from the JD' : 'Prepare from the JD'}
+                  {generating ? 'Preparing…' : ownCount ? 'Start again from the JD' : 'Prepare from the JD'}
                 </button>
               }
             >
-              {plan.questions.length === 0 ? (
+              {ownCount === 0 && (
                 <p className="muted">
                   No questions yet — and that is fine. If you add none, {plan.persona.name} prepares them
                   from the job description and each candidate&rsquo;s resume. Add your own below if there
                   are questions your stakeholders always ask.
                 </p>
-              ) : (
+              )}
+              {(
                 <div className="col" style={{ gap: 10 }}>
-                  {plan.questions.map((q, i) => (
+                  {plan.questions.map((q, i) => isIntroQuestion(q) ? (
+                    <div key={q.id} className="qedit fixed">
+                      <div className="between small">
+                        <strong>{i + 1}. {q.text}</strong>
+                        <span className="small muted">🔒 Always asked first, in every interview</span>
+                      </div>
+                    </div>
+                  ) : (
                     <QuestionRow
                       key={q.id}
                       n={i + 1}
                       q={q}
                       onChange={(patch) =>
-                        patchQuestions((tpl?.questions ?? plan.questions).map((x) => (x.id === q.id ? { ...x, ...patch } : x)))
+                        patchQuestions(own().map((x) => (x.id === q.id ? { ...x, ...patch } : x)))
                       }
-                      onRemove={() => patchQuestions((tpl?.questions ?? plan.questions).filter((x) => x.id !== q.id))}
+                      onRemove={() => patchQuestions(own().filter((x) => x.id !== q.id))}
                     />
                   ))}
                 </div>
@@ -144,25 +161,18 @@ export default function InterviewSetup({ job }) {
 
         <div className="col">
           <Card title="What candidates get">
-            <Field label="Assessment">
-              <Select
-                options={Object.entries(ASSESSMENT_TYPES).map(([k, v]) => ({ value: k, label: v.label }))}
-                value={type}
-                onChange={(v) => { patchRules({ assessment_type: v }); if (v !== 'interview') ensureQualification(job._id) }}
-              />
-            </Field>
-
             {type !== 'qualification' && (
               <>
                 <div className="grid c2">
                   <Field label="Language">
-                    <Select options={languageOptions()} value={plan.rules.language} onChange={(v) => patchRules({ language: v })} />
+                    <Select
+                      options={languageOptions().filter((o) => BOT_LANGUAGES.includes(o.value))}
+                      value={BOT_LANGUAGES.includes(plan.rules.language) ? plan.rules.language : 'en-IN'}
+                      onChange={(v) => patchRules({ language: v })}
+                    />
                   </Field>
                   <Field label="Format">
-                    <Select
-                      options={Object.entries(INTERVIEW_MODES).map(([k, v]) => ({ value: k, label: v.label }))}
-                      value={plan.rules.mode} onChange={(v) => patchRules({ mode: v })}
-                    />
+                    <div className="fixed-value">{INTERVIEW_MODES.call.label}</div>
                   </Field>
                 </div>
                 <div className="grid c2">
@@ -215,18 +225,21 @@ export default function InterviewSetup({ job }) {
                 />
                 <span className="small muted">warnings</span>
               </div>
-              <label className="check">
-                <input type="checkbox" checked={p.paste_detection !== false} onChange={(e) => patchProctoring({ paste_detection: e.target.checked })} />
-                <span>Note pasted answers</span>
-              </label>
-              <label className="check">
-                <input type="checkbox" checked={Boolean(p.face_presence)} onChange={(e) => patchProctoring({ face_presence: e.target.checked })} />
-                <span>
-                  Check the face stays in frame, and no second person appears
-                  <span className="hint" style={{ display: 'block' }}>Video format only. Uses the browser&rsquo;s face detector where available (Chrome).</span>
-                </span>
-              </label>
-              <div className="hint">Every event is listed in the report with the time it happened. Nothing is scored against the candidate automatically.</div>
+              <div className="small" style={{ marginTop: 12 }}>
+                <strong>Always checked in the AI video interview</strong>
+                <ul className="muted" style={{ margin: '6px 0 0', paddingLeft: 18, lineHeight: 1.7 }}>
+                  <li>Face in view, and looking away from the screen</li>
+                  <li>Another person on camera, or a phone in view</li>
+                  <li>A voice while the candidate’s lips are still</li>
+                  <li>Eye movement like reading answers out</li>
+                  <li>Another window in front, a second display, camera software</li>
+                  <li>Other voices on the microphone, and someone feeding answers</li>
+                </ul>
+              </div>
+              <div className="hint mt">
+                Checked in the candidate’s browser — no pictures leave it. Every sign is listed in the report with
+                the times to watch. Nothing is scored against the candidate automatically.
+              </div>
             </Card>
           )}
 

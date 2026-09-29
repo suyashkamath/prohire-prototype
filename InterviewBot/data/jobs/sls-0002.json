@@ -109,7 +109,12 @@
         "kind": "number",
         "knockout": null
       }
-    ]
+    ],
+    "settings": {
+      "language": "English",
+      "strictness": "strict"
+    }
   },
-  "version": 1
+  "version": 5,
+  "updated_at": "2026-09-29T05:49:29+00:00"
 }

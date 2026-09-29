@@ -17,6 +17,8 @@ import { getCandidate } from './candidates.js'
 import { getApplication, systemMoveStage, moveStage } from './applications.js'
 import { evaluateQualification, defaultQualification } from '../domain/qualification.js'
 import { languageByCode } from '../domain/locations.js'
+import { isBotPlan, toBotPlan, sessionFromBot, reportFromBot } from '../domain/interviewBot.js'
+import { botUrl, createBotSession, fetchBotSession, updateBotInvite, regenerateBotReport, emailBotInvite } from './interviewBot.js'
 
 // --- templates (§9.6) ------------------------------------------------------
 
@@ -261,9 +263,25 @@ export async function invite(applicationId, adhoc = null, { email } = {}) {
   const attempt = db.find('interview_sessions', { application_id: applicationId }).length + 1
   const token = newToken()
   const expiresAt = new Date(Date.now() + 7 * 86400_000).toISOString()
+  const sessionId = newId()
+
+  // An AI voice call runs on the InterviewBot server. It is created there first,
+  // with this plan, so a server that is down fails here in front of the
+  // recruiter — not later in front of the candidate.
+  let bot = null
+  if (isBotPlan(resolved.plan)) {
+    const created = await createBotSession(toBotPlan({
+      plan: resolved.plan,
+      job: resolved.job,
+      candidate: resolved.candidate,
+      company: getSettings().org_name ?? 'Probus Insurance',
+      links: { session_id: sessionId, application_id: applicationId, candidate_id: app.candidate_id, job_id: app.job_id, expires_at: expiresAt },
+    }))
+    bot = { id: created.id, url: created.url, server: botUrl(), synced_at: null, report_at: null }
+  }
 
   const session = db.insert('interview_sessions', {
-    _id: newId(),
+    _id: sessionId,
     application_id: applicationId,
     candidate_id: app.candidate_id,
     job_id: app.job_id,
@@ -286,6 +304,9 @@ export async function invite(applicationId, adhoc = null, { email } = {}) {
       email: email ?? null,
       resend_count: 0,
     },
+
+    // Set for an AI voice call: where it runs, and the link the candidate gets.
+    bot,
 
     state: 'invited',
     consent: { recording: null, captured_at: null },
@@ -316,10 +337,12 @@ export async function invite(applicationId, adhoc = null, { email } = {}) {
     summary: `Invited ${app.candidate_name} — ${resolved.plan.questions.length} questions, ${resolved.plan.rules.duration_minutes} min, ${resolved.plan.rules.language}`,
   })
 
-  return { session, url: interviewUrl(token) }
+  return { session, url: linkFor(session) }
 }
 
 export const interviewUrl = (token) => `${location.origin}/interview/${token}`
+/** The link the candidate opens: the voice-call server's for an AI call, ours otherwise. */
+export const linkFor = (session) => session.bot?.url ?? interviewUrl(session.invite.token)
 export const reportUrl = (token) => `${location.origin}/share-report/${token}`
 
 // --- sessions --------------------------------------------------------------
@@ -348,6 +371,7 @@ export function findByToken(token) {
 export function cancelSession(id) {
   const s = getSession(id)
   db.update('interview_sessions', id, { state: 'cancelled' })
+  if (s.bot) updateBotInvite(s.bot.id, { cancel: true }).catch((err) => console.warn('Could not cancel the call link:', err.message))
   logActivity({
     type: 'interview.cancelled',
     subject_type: 'application',
@@ -359,14 +383,38 @@ export function cancelSession(id) {
 
 export function resendInvite(id) {
   const s = getSession(id)
+  const expiresAt = new Date(Date.now() + 7 * 86400_000).toISOString()
   db.update('interview_sessions', id, {
     invite: {
       ...s.invite,
       resend_count: (s.invite.resend_count ?? 0) + 1,
-      expires_at: new Date(Date.now() + 7 * 86400_000).toISOString(),
+      expires_at: expiresAt,
     },
   })
-  return { session: getSession(id), url: interviewUrl(s.invite.token) }
+  if (s.bot) updateBotInvite(s.bot.id, { expires_at: expiresAt }).catch((err) => console.warn('Could not extend the call link:', err.message))
+  return { session: getSession(id), url: linkFor(s) }
+}
+
+/** Email a voice-call invite from the HR mailbox, through the InterviewBot server. */
+export async function emailInvite(sessionId, email) {
+  const s = getSession(sessionId)
+  if (!s?.bot) throw new Error('Only an AI voice call invite can be emailed from here.')
+  await emailBotInvite(s.bot.id, { to: email.to, cc: email.cc, subject: email.subject, body: email.body })
+}
+
+/** What the recruiter sent, and how — "what did we tell her?" stays answerable. */
+export function recordInviteEmail(sessionId, { to, cc, subject, body, via }) {
+  const s = getSession(sessionId)
+  if (!s) return
+  db.update('interview_sessions', sessionId, {
+    invite: { ...s.invite, sent_to: to || s.invite.sent_to, email: { to, cc, subject, body, via, at: nowIso() } },
+  })
+  logActivity({
+    type: 'interview.emailed',
+    subject_type: 'application',
+    subject_id: s.application_id,
+    summary: via === 'server' ? `Interview link emailed to ${to}` : `Interview link handed to the ${via === 'whatsapp' ? 'WhatsApp' : 'mail app'} for ${to}`,
+  })
 }
 
 /**
@@ -387,6 +435,7 @@ export function sweepExpired() {
   // A session that was started and abandoned mid-way becomes `abandoned` after
   // 30 minutes of silence. Whatever was answered still gets scored.
   for (const s of db.find('interview_sessions', { state: 'in_progress' })) {
+    if (s.bot) continue          // a voice call is over when the InterviewBot says so (syncBotSession)
     const last = s.turns.at(-1)?.at ?? s.started_at
     if (last && now - new Date(last).getTime() > 30 * 60_000) {
       db.update('interview_sessions', s._id, { state: 'abandoned', end_reason: 'timeout' })
@@ -415,6 +464,9 @@ export function bootstrap(token) {
     db.update('interview_sessions', s._id, { state: 'expired' })
     return { error: 'This invitation has expired. Ask your recruiter for a new link.' }
   }
+
+  // A voice call runs on the InterviewBot; our own link to it just forwards there.
+  if (s.bot) return { redirect: s.bot.url }
 
   const lang = languageByCode(s.plan.rules.language)
   const proctoring = s.plan.rules.proctoring ?? {}
@@ -629,6 +681,13 @@ export async function completeSession(sessionId, endReason = 'all_questions_answ
 
 export async function generateReport(sessionId) {
   const session = getSession(sessionId)
+  // A voice call is scored by the InterviewBot, from its own transcript.
+  if (session.bot) {
+    const botReport = await regenerateBotReport(session.bot.id)
+    const report = saveReport(sessionId, reportFromBot(botReport, { plan: session.plan, turns: session.turns, durationSeconds: session.duration_seconds }))
+    db.update('interview_sessions', sessionId, { bot: { ...getSession(sessionId).bot, report_at: botReport.generated_at ?? null } })
+    return report
+  }
   // Scored against the session's OWN frozen plan — never the live job.
   const qualification = session.plan.qualification?.length
     ? evaluateQualification(session.plan.qualification, session.qualification_answers ?? {})
@@ -650,7 +709,12 @@ export async function generateReport(sessionId) {
     if (scored.recommendation === 'shortlist') scored.recommendation = 'hold'
   }
   scored.recommendation_reason = recommendationReason(scored, session)
+  return saveReport(sessionId, scored)
+}
 
+/** Store a scored report for a session and update everything that shows it. */
+function saveReport(sessionId, scored) {
+  const session = getSession(sessionId)
   const existing = db.findOne('interview_reports', { session_id: sessionId })
   const shareToken = existing?.share_token ?? newToken()
 
@@ -727,6 +791,13 @@ const END_REASONS = {
   auto_terminated_tab_switches: 'too many tab switches',
   auto_terminated_face: 'candidate left the camera frame repeatedly',
   timeout: 'no activity for 30 minutes',
+  interviewer_closed: 'The interviewer finished the interview',
+  agent_ended: 'The interviewer ended the call',
+  time_limit: 'time limit reached',
+  candidate_left: 'the candidate closed the page',
+  connection_lost: 'the connection was lost',
+  could_not_connect: 'the call could not connect',
+  error: 'the call failed',
 }
 export const endReasonLabel = (r) => END_REASONS[r] ?? (r ?? '').replace(/_/g, ' ')
 
@@ -811,4 +882,81 @@ export function recordVerdict(reportId, decision, note) {
   const stage = { shortlist: 'shortlisted', reject: 'rejected', hold: 'on_hold' }[decision]
   if (stage) moveStage(report.application_id, stage, note)
   return getReport(reportId)
+}
+
+// --- AI voice calls: reading them back from the InterviewBot ----------------
+
+/**
+ * Bring one voice call up to date: its state, the transcript, tab switches, the
+ * recording and — once the InterviewBot has written it — the report. Safe to
+ * call as often as you like.
+ */
+export async function syncBotSession(sessionId) {
+  const s = getSession(sessionId)
+  if (!s?.bot || s.state === 'cancelled') return s
+  const bot = await fetchBotSession(s.bot.id)
+  const now = sessionFromBot(bot, { botUrl: s.bot.server ?? botUrl() })
+
+  // Not started yet: the state (and its expiry) stays ours.
+  const state = now.state === 'invited' ? s.state : now.state
+  const patch = {
+    turns: now.turns,
+    integrity: { ...s.integrity, tab_switches: now.integrity_tab_switches },
+    violations: now.violations,
+    bot: { ...s.bot, synced_at: nowIso() },
+  }
+  if (now.recording) patch.recording = now.recording
+  patch.fairness = now.fairness                      // what the camera and microphone checks found
+  if (now.started_at) patch.started_at = now.started_at
+  if (state !== s.state) {
+    patch.state = state
+    if (state === 'completed' || state === 'abandoned') {
+      Object.assign(patch, { ended_at: now.ended_at, duration_seconds: now.duration_seconds, end_reason: now.end_reason })
+    }
+  }
+  db.update('interview_sessions', sessionId, patch)
+
+  if (state !== s.state) {
+    const name = s.plan.candidate_context?.full_name
+    const summary = (st) => db.update('applications', s.application_id, {
+      interview_summary: { ...(getApplication(s.application_id).interview_summary ?? {}), session_id: sessionId, state: st },
+    })
+    if (state === 'in_progress') {
+      systemMoveStage(s.application_id, 'interview_in_progress')
+      summary('in_progress')
+      logActivity({ type: 'interview.started', subject_type: 'application', subject_id: s.application_id, summary: `${name} started their AI voice interview`, by: 'candidate' })
+    } else if (state === 'completed') {
+      systemMoveStage(s.application_id, 'interview_completed')
+      summary('scoring')
+      logActivity({ type: 'interview.completed', subject_type: 'application', subject_id: s.application_id, summary: `${name} finished their AI voice interview`, by: 'candidate' })
+    } else if (state === 'abandoned') {
+      systemMoveStage(s.application_id, 'abandoned')
+      summary('abandoned')
+      logActivity({ type: 'interview.abandoned', subject_type: 'application', subject_id: s.application_id, summary: `${name}'s AI voice interview ended before they answered (${endReasonLabel(now.end_reason)})`, by: 'system' })
+    }
+  }
+
+  // The InterviewBot writes its report a minute or so after the call ends.
+  if (bot.report?.generated_at && bot.report.generated_at !== s.bot.report_at) {
+    const fresh = getSession(sessionId)
+    saveReport(sessionId, reportFromBot(bot.report, { plan: fresh.plan, turns: fresh.turns, durationSeconds: fresh.duration_seconds }))
+    db.update('interview_sessions', sessionId, { bot: { ...getSession(sessionId).bot, report_at: bot.report.generated_at } })
+  }
+  return getSession(sessionId)
+}
+
+/** Voice calls still worth checking: not started, running, or waiting for a report. */
+export function openBotSessions() {
+  return db.all('interview_sessions').filter((s) =>
+    s.bot && (s.state === 'invited' || s.state === 'in_progress' || (s.state === 'completed' && !s.bot.report_at)),
+  )
+}
+
+/** Check every open voice call. Returns how many could not be reached. */
+export async function syncOpenBotSessions() {
+  let failed = 0
+  for (const s of openBotSessions()) {
+    try { await syncBotSession(s._id) } catch { failed++ }
+  }
+  return failed
 }

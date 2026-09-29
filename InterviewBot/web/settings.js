@@ -19,6 +19,7 @@ const FIELDS = [
   { key: 'interviewer_name', label: "Interviewer's name", type: 'text' },
   { key: 'voice_speaker', label: 'Sarvam voice (speaker)', type: 'text', hint: "empty = agent's voice" },
   { key: 'max_tab_switches', label: 'Tab switches before ending', type: 'number' },
+  { key: 'answer_pause_seconds', label: 'Pause that ends an answer (seconds)', type: 'number', step: 0.5, hint: '2.5 (default); 1–8' },
 ]
 const LABEL = Object.fromEntries(FIELDS.map((f) => [f.key, f.label]))
 const STEPS = ['job', 'candidate', 'review']
@@ -52,7 +53,7 @@ function renderFields(container, values, inheritFrom) {
     if (f.type === 'select') {
       return `<label>${f.label}<select data-key="${f.key}"><option value="">${esc(inherited != null && inherited !== '' ? `— ${inherited} (inherited)` : '—')}</option>${f.options.map((o) => `<option ${o === v ? 'selected' : ''}>${o}</option>`).join('')}</select></label>`
     }
-    return `<label>${f.label}<input data-key="${f.key}" type="${f.type}" value="${esc(v)}" placeholder="${esc(ph)}" ${f.type === 'number' ? 'min="0"' : ''}></label>`
+    return `<label>${f.label}<input data-key="${f.key}" type="${f.type}" value="${esc(v)}" placeholder="${esc(ph)}" ${f.type === 'number' ? `min="0" step="${f.step ?? 1}"` : ''}></label>`
   }).join('')
 }
 

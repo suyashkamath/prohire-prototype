@@ -185,16 +185,4 @@ export function parseResume(text = '') {
 
 const CITY_ALIASES = { KA: ['Bangalore'], TN: ['Madras'], MH: ['Bombay'], WB: ['Calcutta'], DL: ['Delhi'] }
 
-/** True when the browser can read this file as text without a server. */
-export function isReadableAsText(file) {
-  return /\.(txt|md|csv|json|rtf)$/i.test(file.name) || file.type.startsWith('text/')
-}
-
-export function readFileAsText(file) {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader()
-    r.onload = () => resolve(String(r.result ?? ''))
-    r.onerror = () => reject(new Error(`Could not read ${file.name}`))
-    r.readAsText(file)
-  })
-}
+// Reading resume files (PDF, Word, text) lives in lib/resumeFiles.js.

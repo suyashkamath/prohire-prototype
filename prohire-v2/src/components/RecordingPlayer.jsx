@@ -37,6 +37,20 @@ export default function RecordingPlayer({ session, videoRef, filename, allowDown
     }
   }, [session._id, segments])
 
+  // An AI voice call is recorded by the InterviewBot server, and played from there.
+  if (session.recording?.url) {
+    return (
+      <div className="col" style={{ gap: 10 }}>
+        <video ref={videoRef} src={session.recording.url} controls playsInline className="recording-video" />
+        {allowDownload && (
+          <div className="row">
+            <a className="btn sm" href={session.recording.url} download={`${filename}.webm`}>⬇ Download video</a>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   if (!segments) {
     return (
       <div className="recording-empty">

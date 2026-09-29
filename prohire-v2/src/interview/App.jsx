@@ -34,7 +34,10 @@ export default function InterviewApp() {
   const [stream, setStream] = useState(null)
 
   useEffect(() => () => stopStream(stream), [stream])
+  // An AI voice call runs on the interview server; an old link to it here goes there.
+  useEffect(() => { if (boot.redirect) window.location.replace(boot.redirect) }, [boot.redirect])
 
+  if (boot.redirect) return <Shell title="Interview"><div className="row"><span className="spin" /> Opening your interview…</div></Shell>
   if (boot.error) {
     return (
       <Shell title="Interview">

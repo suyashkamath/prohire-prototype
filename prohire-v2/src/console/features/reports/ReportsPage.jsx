@@ -3,11 +3,18 @@ import { useNavigate } from 'react-router-dom'
 
 import { useLive } from '../../../components/ui/useLive.js'
 import { Card, Badge, Empty, Select, Match, Stat, Bar } from '../../../components/ui/index.jsx'
-import { listReports } from '../../../services/interviews.js'
+import { listReports, getSession } from '../../../services/interviews.js'
 import { listApplications } from '../../../services/applications.js'
 import { listJobs } from '../../../services/jobs.js'
 import { FUNNEL } from '../../../domain/stages.js'
-import { relative } from '../../../lib/format.js'
+import { relative, formatDate } from '../../../lib/format.js'
+
+// The AI's suggestion, in the same words the report itself uses.
+const REC = {
+  shortlist: { label: 'Recommended', tone: 'good' },
+  hold: { label: 'Hold — review', tone: 'warn' },
+  reject: { label: 'Not recommended', tone: 'bad' },
+}
 
 export default function ReportsPage() {
   const navigate = useNavigate()
@@ -17,7 +24,17 @@ export default function ReportsPage() {
     () => {
       const jobs = listJobs()
       const apps = listApplications({ job_id: jobId || undefined })
-      const reports = listReports({ job_id: jobId || undefined })
+      // Each report with who and what it is for, taken from the session's
+      // frozen plan so a deleted job or candidate still reads correctly.
+      const reports = listReports({ job_id: jobId || undefined }).map((r) => {
+        const plan = getSession(r.session_id)?.plan
+        return {
+          ...r,
+          candidate_name: plan?.candidate_context?.full_name ?? 'Candidate',
+          job_reference: plan?.job_context?.reference,
+          job_title: plan?.job_context?.title,
+        }
+      })
       const decided = reports.filter((r) => r.recruiter_verdict)
 
       return {
@@ -69,59 +86,95 @@ export default function ReportsPage() {
           </div>
         )}
 
-        <div className="grid split">
-          <Card title="Hiring funnel">
-            <div className="col" style={{ gap: 14 }}>
-              {data.funnel.map((f) => (
-                <div key={f.key}>
-                  <div className="between" style={{ marginBottom: 4 }}>
-                    <span>{f.label}</span>
-                    <span className="tabular">
-                      {f.count}
-                      {data.totalApps > 0 && <span className="dim"> · {Math.round((f.count / data.totalApps) * 100)}%</span>}
-                    </span>
-                  </div>
-                  <Bar value={data.totalApps ? (f.count / data.totalApps) * 100 : 0} tone="" />
-                </div>
-              ))}
+        <Card
+          title="Interview reports"
+          actions={data.reports.length > 0 && <span className="small muted">{data.reports.length} report{data.reports.length === 1 ? '' : 's'} · newest first</span>}
+          className="mb"
+        >
+          {data.reports.length === 0 ? (
+            <Empty title="No reports yet">Reports appear here once candidates complete their interviews.</Empty>
+          ) : (
+            <div className="table-wrap">
+              <table className="table reports-table">
+                <thead>
+                  <tr>
+                    <th>Candidate</th>
+                    <th>Interviewed</th>
+                    <th className="num">Answered</th>
+                    <th>Integrity</th>
+                    <th className="num">Score</th>
+                    <th>AI suggests</th>
+                    <th>Your decision</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.reports.map((r) => {
+                    const rec = REC[r.recommendation] ?? REC.hold
+                    const events = r.integrity?.total ?? 0
+                    const { questions_answered: answered, questions_planned: planned } = r.signals?.coverage ?? {}
+                    return (
+                      <tr key={r._id} className="clickable" onClick={() => navigate(`/interviews/${r.session_id}`)}>
+                        <td className="report-who">
+                          <strong>{r.candidate_name}</strong>
+                          <div className="small muted">
+                            {r.job_reference && <code className="mono dim">{r.job_reference}</code>} {r.job_title}
+                          </div>
+                          {r.headline && <div className="small dim truncate" title={r.headline}>{r.headline}</div>}
+                        </td>
+                        <td className="small" data-label="Interviewed">
+                          {formatDate(r.generated_at)}
+                          <div className="dim">{relative(r.generated_at)}</div>
+                        </td>
+                        <td className="num" data-label="Answered">{answered ?? '—'}<span className="dim">/{planned ?? '—'}</span></td>
+                        <td data-label="Integrity">
+                          {events > 0
+                            ? <Badge tone={r.integrity?.level === 'high' ? 'bad' : 'warn'}>⚠ {events} event{events === 1 ? '' : 's'}</Badge>
+                            : <span className="dim small">None</span>}
+                        </td>
+                        <td className="num" data-label="Score"><Match value={r.overall_score} /></td>
+                        <td data-label="AI suggests">
+                          <Badge tone={rec.tone}>{rec.label}</Badge>
+                          {r.confidence === 'low' && <div className="small dim" style={{ marginTop: 3 }}>low confidence</div>}
+                        </td>
+                        <td data-label="Your decision">
+                          {r.recruiter_verdict ? (
+                            <>
+                              <span className="verdict">{{ shortlist: 'Shortlisted', hold: 'On hold', reject: 'Rejected' }[r.recruiter_verdict.decision] ?? r.recruiter_verdict.decision}</span>
+                              <div className="small dim">{r.recruiter_verdict.agreed_with_ai ? 'agreed with AI' : 'overrode AI'}</div>
+                            </>
+                          ) : (
+                            <Badge tone="accent">Not decided</Badge>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
-            <p className="small muted" style={{ marginTop: 14 }}>
-              Each row counts applications <em>currently</em> at that stage, not everyone who has ever
-              passed through it — so the bars are a snapshot, not a cumulative funnel.
-            </p>
-          </Card>
+          )}
+        </Card>
 
-          <Card title="Interview reports">
-            {data.reports.length === 0 ? (
-              <Empty title="No reports yet">Reports appear here once candidates complete their interviews.</Empty>
-            ) : (
-              <div className="col" style={{ gap: 8 }}>
-                {data.reports.map((r) => (
-                  <div key={r._id} className="card clickable" onClick={() => navigate(`/interviews/${r.session_id}`)}>
-                    <div className="card-body tight between">
-                      <div style={{ minWidth: 0 }}>
-                        <strong className="truncate">{r.headline}</strong>
-                        <div className="small dim">
-                          {relative(r.generated_at)} · {r.signals.coverage.questions_answered}/{r.signals.coverage.questions_planned} answered
-                        </div>
-                      </div>
-                      <div className="row" style={{ flex: 'none' }}>
-                        {r.recruiter_verdict ? (
-                          <Badge tone={r.recruiter_verdict.agreed_with_ai ? 'good' : 'warn'}>
-                            {r.recruiter_verdict.agreed_with_ai ? 'agreed' : 'overridden'}
-                          </Badge>
-                        ) : (
-                          <Badge tone="accent">undecided</Badge>
-                        )}
-                        <Match value={r.overall_score} />
-                      </div>
-                    </div>
-                  </div>
-                ))}
+        <Card title="Hiring funnel">
+          <div className="funnel-rows">
+            {data.funnel.map((f) => (
+              <div key={f.key}>
+                <div className="between" style={{ marginBottom: 4 }}>
+                  <span>{f.label}</span>
+                  <span className="tabular">
+                    {f.count}
+                    {data.totalApps > 0 && <span className="dim"> · {Math.round((f.count / data.totalApps) * 100)}%</span>}
+                  </span>
+                </div>
+                <Bar value={data.totalApps ? (f.count / data.totalApps) * 100 : 0} tone="" />
               </div>
-            )}
-          </Card>
-        </div>
+            ))}
+          </div>
+          <p className="small muted" style={{ marginTop: 14, marginBottom: 0 }}>
+            Each row counts applications <em>currently</em> at that stage, not everyone who has ever
+            passed through it — so the bars are a snapshot, not a cumulative funnel.
+          </p>
+        </Card>
       </div>
     </>
   )

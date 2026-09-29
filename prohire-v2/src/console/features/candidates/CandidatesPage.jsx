@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { useLive } from '../../../components/ui/useLive.js'
-import { Card, Empty, Select, Menu } from '../../../components/ui/index.jsx'
+import { Card, Empty, Select, Menu, Modal } from '../../../components/ui/index.jsx'
 import { useToast } from '../../../components/ui/toastContext.js'
 import {
   listCandidates, allSkills, allTags, mergeCandidates, dismissReviewFlag, getCandidate,
@@ -85,9 +85,7 @@ export default function CandidatesPage() {
         </div>
         <div className="spacer" />
         <button className="btn" onClick={exportRows}>Export to Excel</button>
-        <button className="btn" onClick={() => setAdding('portal')}>From LinkedIn / Naukri</button>
-        <button className="btn" onClick={() => setAdding('manual')}>Enter details</button>
-        <button className="btn primary" onClick={() => setAdding('upload')}>Upload resumes</button>
+        <button className="btn primary" onClick={() => setAdding('choose')}>+ Add candidate</button>
       </div>
 
       <div className="page wide">
@@ -128,7 +126,7 @@ export default function CandidatesPage() {
         {data.rows.length === 0 ? (
           <Card>
             {data.total === 0 ? (
-              <Empty title="No candidates yet" action={<button className="btn primary" onClick={() => setAdding('upload')}>Upload resumes</button>}>
+              <Empty title="No candidates yet" action={<button className="btn primary" onClick={() => setAdding('choose')}>+ Add candidate</button>}>
                 Save every good profile here — even when there is no opening today. When a position
                 comes up, search here first.
               </Empty>
@@ -222,6 +220,7 @@ export default function CandidatesPage() {
         )}
       </div>
 
+      {adding === 'choose' && <AddCandidateChoice onPick={setAdding} onClose={() => setAdding(null)} />}
       {adding === 'upload' && <UploadDialog onClose={() => setAdding(null)} />}
       {adding === 'manual' && <ManualEntry onClose={() => setAdding(null)} />}
       {adding === 'portal' && <FromPortal job={null} onClose={() => setAdding(null)} />}
@@ -247,5 +246,34 @@ function MergeReview({ candidate }) {
         Different people
       </button>
     </div>
+  )
+}
+
+// The three ways a candidate gets into ProHire, behind one button.
+const ADD_WAYS = [
+  { key: 'upload', icon: '⇪', title: 'Upload resumes', detail: 'PDF, Word or text files — one or many — or paste a resume. Details are read from each one.' },
+  { key: 'manual', icon: '✎', title: 'Enter details', detail: 'Type in one candidate by hand. A name and a phone number are enough.' },
+  { key: 'portal', icon: '⇄', title: 'From LinkedIn / Naukri', detail: 'Import a profile with the ProHire Chrome extension, or paste the profile text.' },
+]
+
+function AddCandidateChoice({ onPick, onClose }) {
+  return (
+    <Modal title="Add candidate" onClose={onClose}>
+      <p className="muted" style={{ marginTop: 0 }}>How would you like to add them?</p>
+      <ul className="add-ways">
+        {ADD_WAYS.map((w) => (
+          <li key={w.key}>
+            <button className="add-way" onClick={() => onPick(w.key)}>
+              <span className="add-way-icon" aria-hidden="true">{w.icon}</span>
+              <span className="add-way-text">
+                <strong>{w.title}</strong>
+                <span className="small muted">{w.detail}</span>
+              </span>
+              <span className="add-way-go" aria-hidden="true">›</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </Modal>
   )
 }

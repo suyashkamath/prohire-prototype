@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useLive } from '../../../components/ui/useLive.js'
 import { Card, Badge, Empty, Select, CopyButton } from '../../../components/ui/index.jsx'
 import { useToast } from '../../../components/ui/toastContext.js'
-import { listSessions, interviewUrl, resendInvite, cancelSession } from '../../../services/interviews.js'
+import { listSessions, linkFor, resendInvite, cancelSession } from '../../../services/interviews.js'
 import { relative, mmss } from '../../../lib/format.js'
 
 const STATE_TONE = {
@@ -62,12 +62,13 @@ export default function InterviewsPage() {
                       {s.plan.job_context?.title}
                       {' · '}{s.plan.questions.length} questions · {s.plan.rules.duration_minutes} min
                       {' · '}{s.plan.persona.language_label ?? s.plan.rules.language}
+                      {s.bot && ' · AI video interview'}
                       {' · '}{s.plan.rules.strictness}
                     </div>
                     <div className="small dim" style={{ marginTop: 3 }}>
                       {s.state === 'invited' && `Invited ${relative(s.invite.issued_at)} · expires ${relative(s.invite.expires_at)}`}
                       {s.state === 'in_progress' && `Started ${relative(s.started_at)} · ${s.turns.filter((t) => t.role === 'candidate').length} answers so far`}
-                      {s.state === 'completed' && `Finished ${relative(s.ended_at)} · ${mmss(s.duration_seconds ?? 0)}`}
+                      {s.state === 'completed' && `Finished ${relative(s.ended_at)} · ${mmss(s.duration_seconds ?? 0)}${s.bot && !s.report_id ? ' · report on its way' : ''}`}
                       {s.state === 'expired' && `Never opened. Invited ${relative(s.invite.issued_at)}.`}
                       {s.state === 'abandoned' && `Started ${relative(s.started_at)}, never finished. Answered questions were still scored.`}
                     </div>
@@ -81,8 +82,9 @@ export default function InterviewsPage() {
                     )}
                     {(s.state === 'invited' || s.state === 'expired') && (
                       <>
-                        <CopyButton text={interviewUrl(s.invite.token)} label="Copy link" />
-                        <a className="btn sm" href={interviewUrl(s.invite.token)} target="_blank" rel="noreferrer">Open</a>
+                        <CopyButton text={linkFor(s)} label="Copy link" />
+                        {/* A voice call's link is the candidate's; opening it would start their call. */}
+                        {!s.bot && <a className="btn sm" href={linkFor(s)} target="_blank" rel="noreferrer">Open</a>}
                         <button
                           className="btn sm"
                           onClick={() => { resendInvite(s._id); toast('Re-sent — expiry extended by 7 days.', 'good') }}

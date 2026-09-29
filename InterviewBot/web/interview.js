@@ -11,35 +11,43 @@ const TEXT = {
   English: {
     hello: (n) => `Hello, ${n}.`,
     lead: (job, co, mins, ai) => `You're invited to an interview for ${job} at ${co}. It takes about ${mins} minutes. You'll speak with ${ai}, an AI interviewer. A recruiter reviews everything and makes the decision.`,
-    consent: ['Your video and voice are recorded, with a transcript of the conversation.', 'It is shared only with the recruiting team for this job.', 'Leaving this tab is noted.', 'It is kept for 180 days, then deleted (DPDP Act).', 'The AI does not decide. A person does.'],
+    consent: ['Your video and voice are recorded, with a transcript of the conversation.', 'It is shared only with the recruiting team for this job.', 'To keep it fair, your browser checks the camera for other people and where you look, and the microphone is checked for other voices. No face data is stored.', 'Leaving this tab or switching to another window is noted.', 'It is kept for 180 days, then deleted (DPDP Act).', 'The AI does not decide. A person does.'],
     agree: 'I understand and agree to this interview being recorded.',
     toCheck: 'Continue', checkTitle: 'Camera and microphone', checkText: 'Your browser will ask for permission. Sit somewhere quiet and stay on this tab.',
     enable: 'Turn on camera and microphone', begin: 'Start interview', denied: 'Permission was denied. Allow camera and microphone in the address bar, then try again.',
-    connecting: 'Connecting…', listening: 'Listening…', speaking: 'Speaking…', youSpeaking: 'You are speaking…',
-    end: 'End interview', confirmEnd: 'End the interview now? Your answers so far are kept.',
+    connecting: 'Connecting…', listening: 'Listening…', speaking: 'Speaking…', youSpeaking: 'You are speaking… take your time.', oneMoment: 'One moment…',
+    endNote: (ai) => `${ai} will end the interview when all the questions are done. Please stay on this page until then.`,
+    leave: 'Leaving this page ends your interview.',
     warn: (n, m) => `You left the interview tab (${n} of ${m}). Please stay on this tab — after ${m} warnings the interview ends.`,
     you: 'You', saving: 'Saving your interview…', doneTitle: 'Thank you for your time.', doneText: 'Your interview is complete. A recruiter will review it and get back to you. You can close this page.',
     endedTabs: 'The interview ended because the tab was left too many times. Your answers so far are saved.',
     lost: 'The connection was lost.',
+    expired: 'This invitation has expired. Ask your recruiter for a new link.',
+    alone: 'Someone else seems to be on camera. Please take the interview on your own.',
   },
   Hindi: {
     hello: (n) => `नमस्ते, ${n}।`,
     lead: (job, co, mins, ai) => `आपको ${co} में ${job} पद के interview के लिए बुलाया गया है। इसमें लगभग ${mins} मिनट लगेंगे। आपकी बात ${ai} से होगी, जो एक AI interviewer है। सब कुछ एक recruiter देखते हैं और फ़ैसला वही लेते हैं।`,
-    consent: ['आपका video और आवाज़ record होंगे, साथ में बातचीत का transcript भी।', 'यह सिर्फ़ इस job की recruiting team के साथ share होगा।', 'Tab छोड़ना दर्ज होता है।', 'यह 180 दिन रखा जाएगा, फिर delete (DPDP Act)।', 'फ़ैसला AI नहीं, एक इंसान लेता है।'],
+    consent: ['आपका video और आवाज़ record होंगे, साथ में बातचीत का transcript भी।', 'यह सिर्फ़ इस job की recruiting team के साथ share होगा।', 'Interview निष्पक्ष रहे, इसलिए आपका browser camera में दूसरे लोगों और आप कहाँ देख रहे हैं, यह जाँचता है, और microphone में दूसरी आवाज़ें जाँची जाती हैं। चेहरे का कोई data store नहीं होता।', 'Tab छोड़ना या दूसरी window पर जाना दर्ज होता है।', 'यह 180 दिन रखा जाएगा, फिर delete (DPDP Act)।', 'फ़ैसला AI नहीं, एक इंसान लेता है।'],
     agree: 'मैं समझता/समझती हूँ और इस interview के record होने के लिए सहमत हूँ।',
     toCheck: 'आगे बढ़ें', checkTitle: 'Camera और microphone', checkText: 'आपका browser permission माँगेगा। किसी शांत जगह बैठें और इसी tab पर रहें।',
     enable: 'Camera और microphone चालू करें', begin: 'Interview शुरू करें', denied: 'Permission नहीं मिली। Address bar में camera और microphone की अनुमति दें, फिर दोबारा कोशिश करें।',
-    connecting: 'जुड़ रहा है…', listening: 'सुन रही है…', speaking: 'बोल रही है…', youSpeaking: 'आप बोल रहे हैं…',
-    end: 'Interview ख़त्म करें', confirmEnd: 'क्या interview अभी ख़त्म करना है? अब तक के जवाब सुरक्षित रहेंगे।',
+    connecting: 'जुड़ रहा है…', listening: 'सुन रही है…', speaking: 'बोल रही है…', youSpeaking: 'आप बोल रहे हैं… आराम से बोलिए।', oneMoment: 'एक पल…',
+    endNote: (ai) => `सारे सवाल पूरे होने पर ${ai} interview ख़त्म करेंगी। तब तक कृपया इसी page पर रहें।`,
+    leave: 'यह page छोड़ने से आपका interview ख़त्म हो जाएगा।',
     warn: (n, m) => `आपने interview का tab छोड़ा (${n} / ${m})। कृपया इसी tab पर रहें — ${m} warnings के बाद interview ख़त्म हो जाएगा।`,
     you: 'आप', saving: 'आपका interview save हो रहा है…', doneTitle: 'आपके समय के लिए धन्यवाद।', doneText: 'आपका interview पूरा हो गया। एक recruiter इसे देखकर आपसे संपर्क करेंगे। आप यह page बंद कर सकते हैं।',
     endedTabs: 'Tab बार-बार छोड़ने की वजह से interview ख़त्म कर दिया गया। अब तक के जवाब save हैं।',
     lost: 'Connection टूट गया।',
+    expired: 'यह invitation expire हो गया है। नया link पाने के लिए अपने recruiter से संपर्क करें।',
+    alone: 'Camera में कोई और भी दिख रहा है। कृपया interview अकेले दें।',
   },
 }
 
 let info, t, stream, ctx, ws, recorder, chunks = [], mixDest
 let playing = [], nextAt = 0, startedAt = 0, timerId, ended = false
+let proctor = null                    // the camera checks (web/proctor.js); null if they could not start
+const proctorModule = import('/static/proctor.js?v=2').catch(() => null)
 
 const show = (id) => ['welcome', 'check', 'live', 'done'].forEach((s) => { $(s).hidden = s !== id })
 const setState = (text, orb = '') => { $('state').textContent = text; $('orb').className = `orb ${orb}` }
@@ -53,6 +61,7 @@ async function init() {
   document.documentElement.lang = info.language === 'Hindi' ? 'hi' : 'en'
   $('title').textContent = info.job_title
   $('subtitle').textContent = `${info.company} · ${info.interviewer_name} · ${info.language}`
+  if (info.status === 'expired') return error(t.expired)
   if (info.status === 'ended') { show('done'); $('doneTitle').textContent = t.doneTitle; $('doneText').textContent = t.doneText; return }
 
   $('helloText').textContent = t.hello(info.candidate_name.split(' ')[0])
@@ -70,8 +79,8 @@ async function init() {
   }
   $('enable').onclick = enableDevices
   $('begin').onclick = begin
-  $('endBtn').textContent = t.end
-  $('endBtn').onclick = () => { if (confirm(t.confirmEnd)) send({ type: 'end' }) }
+  // No "end" button: only the interviewer (or the time limit) ends the interview.
+  $('endNote').textContent = t.endNote(info.interviewer_name)
   $('interviewerName').textContent = info.interviewer_name
   show('welcome')
 }
@@ -85,6 +94,7 @@ async function enableDevices() {
     })
     $('preview').srcObject = stream
     $('begin').disabled = false
+    proctorModule.then((m) => m?.preload())      // the face model downloads while they get ready
   } catch (e) {
     $('checkError').innerHTML = `<div class="note bad small">${e.name === 'NotAllowedError' ? t.denied : e.message}</div>`
   }
@@ -151,7 +161,13 @@ function stopPlayback() {
 
 const send = (msg) => { if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg)) }
 
-function addBubble(role, text) {
+function addBubble(role, text, replace = false) {
+  // The same answer, carried on after a pause: grow the bubble instead of adding one.
+  const last = $('transcript').lastElementChild
+  if (replace && last?.classList.contains(role)) {
+    last.lastChild.textContent = text
+    return last.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }
   const div = document.createElement('div')
   div.className = `bubble ${role}`
   div.innerHTML = `<span class="who"></span>`
@@ -168,14 +184,16 @@ async function begin() {
   setState(t.connecting)
   await startAudio()
   startRecording()
+  startChecks()
 
   ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/interview/${sessionId}`)
   ws.onmessage = async (e) => {
     const msg = JSON.parse(e.data)
     if (msg.type === 'audio') await play(msg.audio, msg.sample_rate)
-    else if (msg.type === 'transcript') addBubble(msg.role, msg.text)
+    else if (msg.type === 'transcript') addBubble(msg.role, msg.text, msg.replace)
     else if (msg.type === 'interrupt') stopPlayback()
-    else if (msg.type === 'speech' && msg.state === 'start') setState(t.youSpeaking, 'listening')
+    else if (msg.type === 'speech' && msg.state === 'start') { setState(t.youSpeaking, 'listening'); proctor?.answerStarted() }
+    else if (msg.type === 'speech' && msg.state === 'end') { setState(t.oneMoment); proctor?.answerEnded() }
     else if (msg.type === 'warning') $('warning').innerHTML = `<div class="note warn small">${t.warn(msg.count, msg.limit)}</div>`
     else if (msg.type === 'error') error(msg.message)
     else if (msg.type === 'status' && msg.state === 'live') { setState(t.listening, 'listening'); startTimer() }
@@ -198,6 +216,51 @@ document.addEventListener('visibilitychange', () => {
   if (!ws || ended) return
   if (document.hidden && !away) { away = true; send({ type: 'event', kind: 'tab_switch' }) }
   if (!document.hidden) away = false
+})
+
+// Another window in front (a chat, notes…) while the tab stays open. A tab
+// switch is counted above, so only focus lost with the tab still showing counts.
+let blurredAt = null
+window.addEventListener('blur', () => { if (ws && !ended && !document.hidden) blurredAt = Date.now() })
+window.addEventListener('focus', () => {
+  if (blurredAt == null) return
+  const seconds = (Date.now() - blurredAt) / 1000
+  blurredAt = null
+  if (!ended && !document.hidden && seconds >= 2) send({ type: 'event', kind: 'window_blur', detail: { seconds: Math.round(seconds * 10) / 10 } })
+})
+
+// --- fairness checks on the camera (web/proctor.js) ---------------------------------
+
+async function startChecks() {
+  const m = await proctorModule
+  if (!m || ended) return
+  try {
+    proctor = await m.startProctor({
+      video: $('self'),
+      stream,
+      audioCtx: ctx,
+      isInterviewerSpeaking: () => playing.length > 0,
+      onEpisode: (kind, detail) => send({ type: 'event', kind, detail }),
+      onWarn: () => {
+        $('warning').innerHTML = `<div class="note warn small">${t.alone}</div>`
+        setTimeout(() => { $('warning').innerHTML = '' }, 8000)
+      },
+    })
+  } catch { proctor = null }
+}
+
+async function sendChecks() {
+  const summary = proctor?.stop() ?? { face_check: 'unavailable', reason: 'The camera check did not start.' }
+  await fetch(`/api/sessions/${sessionId}/proctoring`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(summary),
+  })
+}
+
+// Closing or reloading the page mid-interview: ask the browser to confirm first.
+window.addEventListener('beforeunload', (e) => {
+  if (!ws || ended) return
+  e.preventDefault()
+  e.returnValue = t.leave
 })
 
 // --- recording -----------------------------------------------------------------------
@@ -223,14 +286,23 @@ async function uploadRecording() {
   await fetch(`/api/sessions/${sessionId}/recording`, { method: 'POST', body: form })
 }
 
+// Resolves when the interviewer's queued voice has finished playing (at most `max` ms).
+function playbackDone(max = 20000) {
+  const left = ctx ? Math.max(0, nextAt - ctx.currentTime) * 1000 : 0
+  return new Promise((resolve) => setTimeout(resolve, Math.min(left + 300, max)))
+}
+
 async function finish(reason) {
   if (ended) return
   ended = true
   clearInterval(timerId)
+  try { ws?.close() } catch { /* already closed */ }
+  // The interviewer ended it: let the goodbye play out (and be recorded) first.
+  if (reason === 'interviewer_closed' || reason === 'agent_ended') await playbackDone()
   stopPlayback()
   $('rec').hidden = true
   setState(t.saving)
-  try { ws?.close() } catch { /* already closed */ }
+  await sendChecks().catch(() => {})
   await uploadRecording().catch(() => {})
   stream?.getTracks().forEach((tr) => tr.stop())
   show('done')
